@@ -4,7 +4,7 @@
 
 ## 环境
 
-目标是 Linux x86_64（Windows 用 WSL2），GCC 16.1.x。先在本仓库执行 `pixi install --locked` 和 `pixi run test`。宿主机器人必须使用同一 Pixi 环境的 Python/动态库运行，或在部署环境按相同依赖重新构建安装 wheel。不要把 Linux `.so` 复制给 Windows Python，也不要只复制扩展文件而漏掉 OpenCV/GCC 运行时。
+目标是 Linux x86_64（Windows 用 WSL2），支持 GCC >=16.1、Clang >=21。先在本仓库执行 `pixi install --locked`、`pixi run test`、`pixi run install`。宿主机器人必须使用同一 Pixi 环境的 Python/动态库运行，或在部署环境按相同依赖重新构建安装 wheel。不要把 Linux `.so` 复制给 Windows Python，也不要只复制扩展文件而漏掉 OpenCV/GCC 运行时。
 
 ### AstrBot
 

@@ -1,14 +1,20 @@
 cmake_minimum_required(VERSION 3.30)
 project(huoxing VERSION 0.2.0 LANGUAGES CXX)
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-   NOT CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16.1 OR
-   NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.2)
-  message(FATAL_ERROR "Use GCC 16.1.x, as required by this project")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.1)
+    message(FATAL_ERROR "GCC >= 16.1 is required")
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 21)
+    message(FATAL_ERROR "Clang >= 21 is required for the tested C++26 modules baseline")
+  endif()
+else()
+  message(FATAL_ERROR "Use GCC >=16.1 or Clang >=21")
 endif()
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(OpenCV 4 REQUIRED COMPONENTS core imgproc features2d calib3d imgcodecs)
 find_package(SQLite3 REQUIRED)
@@ -17,8 +23,15 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/schema.sql" HUOXING_SCHEMA)
 configure_file(src/schema.hpp.in generated/schema.hpp @ONLY)
-add_library(huoxing_core src/core.cpp)
-target_include_directories(huoxing_core PUBLIC include ${OpenCV_INCLUDE_DIRS} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+add_library(huoxing_core)
+target_sources(huoxing_core PUBLIC FILE_SET CXX_MODULES FILES
+  src/modules/types.cppm
+  src/modules/features.cppm
+  src/modules/matching.cppm
+  src/modules/database.cppm
+  src/modules/detector.cppm
+  src/modules/huoxing.cppm)
+target_include_directories(huoxing_core PUBLIC ${OpenCV_INCLUDE_DIRS} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 if(TARGET SQLite3::SQLite3)
   set(HUOXING_SQLITE_TARGET SQLite3::SQLite3)
 else()

@@ -1,6 +1,6 @@
 # 火星梗图检测器
 
-QQ群梗图改图查重。核心使用 **C++26 / GCC 16.1.x**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、原生库和 Python 环境。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
+QQ群梗图改图查重。核心使用 **C++26 named modules**，支持 **GCC ≥16.1 / Clang ≥21**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、原生库和 Python 环境。锁定环境以 GCC 16.1 和 Clang 21 为验证基线。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
 
 目标平台是 Linux x86_64；Windows 使用 WSL2。原生 Windows/MSVC 不在当前构建目标内。
 
@@ -14,11 +14,14 @@ cd ai_bot_huoxing_detector
 git switch codex/cpp26-core
 pixi install --locked
 pixi run test
+pixi run install
 pixi run huoxing original.png --scope qq:bot:group --message-id 100
 pixi run huoxing cropped.png --scope qq:bot:group --message-id 101
 ```
 
-`pixi run test` 构建 C++ 测试和 Python 扩展，安装本项目，运行两层测试。每次命令都在检查后登记；同一 `scope + message_id + part` 重试返回缓存结果且 `replayed=true`。
+每次 CLI 命令都在检查后登记；同一 `scope + message_id + part` 重试返回缓存结果且 `replayed=true`。
+
+`pixi run test` 包含 `clang-format --dry-run --Werror` 检查、GCC 和 Clang 两套独立构建及 C++/Python 测试。`pixi run test-gcc`、`pixi run test-clang` 可分别验证；`pixi run format` 自动格式化。`pixi run install` 把 GCC 构建安装为本环境可导入的包。测试直接加载各构建目录产出的扩展，避免误测另一个编译器安装的版本。
 
 ```python
 from huoxing import Detector, result_dict
@@ -41,15 +44,19 @@ print(result_dict(result))
 5. 至少 12 个内点、内点比例 >=0.55、至少一张图的匹配点凸包覆盖 >=20%。
 6. 对齐公共区域，至少 1024 像素且占目标图 >=15%；模糊后灰度差 <32 的像素占比 >=72% 才判为视觉重复。
 
-裁剪保留的特征仍可匹配；边框通常不影响原内容的局部几何；局部水印允许部分像素不一致。几何覆盖和公共区域像素校验用于降低只共享一个小 logo 带来的误报。阈值在 `src/core.cpp`，属于启发式策略，结果不是校准后的概率。
+裁剪保留的特征仍可匹配；边框通常不影响原内容的局部几何；局部水印允许部分像素不一致。几何覆盖和公共区域像素校验用于降低只共享一个小 logo 带来的误报。阈值在 `src/modules/matching.cppm`，属于启发式策略，结果不是校准后的概率。这是局部特征匹配与视觉去重，没有使用 YOLO 目标框检测或语义向量检索。
 
 原图和每个改图版本分别保存，不做近似匹配结果的传递合并，避免 A≈B、B≈C 就直接推导 A≈C。精确像素相同的图复用同一记录；近似匹配返回按登记顺序找到的第一个匹配版本，未保证相似度最高或整组梗图的绝对最早发布时间。
 
 ## 模块与数据库
 
 ```text
-include/huoxing/core.hpp  C++ 公共接口
-src/core.cpp             特征、匹配、SQLite 原子查询与登记
+src/modules/huoxing.cppm  C++ 公共入口：import huoxing;
+src/modules/types.cppm    结果、特征及证据值类型
+src/modules/features.cppm RGB 哈希、灰度缩放、SIFT 提取
+src/modules/matching.cppm 双向特征匹配、RANSAC、像素验证
+src/modules/database.cppm SQLite RAII、Repository、查询及持久化
+src/modules/detector.cppm 检测流程编排，不含 SQL
 src/binding.cpp          pybind11
 schema.sql               唯一 schema 来源，构建时嵌入核心
 python/huoxing/           解码、CLI、异步 Worker
@@ -58,6 +65,7 @@ plugins/maibot/           MaiBot SDK 2.x 示例
 tests/core_tests.cpp     原生测试
 tests/python/            binding、算法、存储测试
 pixi.toml / pixi.lock     环境声明与锁文件
+.clang-format            C++ 统一格式约定
 ```
 
 `images` 保存群作用域、完整 RGB 哈希、灰度缩略图、局部点、描述子；`occurrences` 保存消息及分段序号、发送者、UTC 登记时间、匹配证据。`meta` 标识数据与特征格式。按群索引、唯一约束、外键及 `BEGIN IMMEDIATE` 保证先查再写的原子性；WAL 支持并发读取。每次调用使用独立数据库连接。
@@ -75,3 +83,5 @@ pixi.toml / pixi.lock     环境声明与锁文件
 自动测试使用固定种子生成的图案正反例，包括裁剪、边框、水印、组合修改、重压缩、不同图片、小共同区域、幂等、群隔离、重启、容量回滚、并发和无效输入。测试通过不代表真实 QQ 或所有梗图达到某个准确率。插件未连接真实 QQ 做端到端验证。
 
 工具参考：[GCC C++26 支持](https://gcc.gnu.org/projects/cxx-status.html)、[pybind11 构建](https://pybind11.readthedocs.io/en/stable/cmake/)。GCC 对 C++26 的支持仍包含实验性部分；本项目明确开启 `-std=c++26`，未依赖反射等额外实验开关。
+
+CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。第三方 C 库、OpenCV、标准库头文件位于 global module fragment；项目接口通过 named modules 导出。不使用 `import std`，避免依赖不同标准库的标准模块打包差异。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。

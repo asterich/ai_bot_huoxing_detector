@@ -23,6 +23,8 @@ pixi run huoxing cropped.png --scope qq:bot:group --message-id 101
 
 `pixi run test` 包含 `clang-format --dry-run --Werror` 检查、GCC 和 Clang 两套独立构建及 C++/Python 测试。`pixi run test-gcc`、`pixi run test-clang` 可分别验证；`pixi run format` 自动格式化。`pixi run install` 把 GCC 构建安装为本环境可导入的包。测试直接加载各构建目录产出的扩展，避免误测另一个编译器安装的版本。
 
+无需自备图片的演示：安装后运行 `pixi run python examples/demo.py`，会生成测试图、登记原图并检测裁剪版，输出匹配证据；演示数据库随后自动清理。
+
 ```python
 from huoxing import Detector, result_dict
 

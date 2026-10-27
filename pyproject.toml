@@ -1,0 +1,20 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.13,<4"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "huoxing-detector"
+version = "0.2.0"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.26,<3", "Pillow>=10,<14"]
+description = "C++26 QQ group meme deduplication with Python binding"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[project.scripts]
+huoxing = "huoxing.cli:main"
+
+[tool.scikit-build]
+wheel.packages = ["python/huoxing"]
+cmake.build-type = "Release"

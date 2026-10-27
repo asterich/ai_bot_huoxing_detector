@@ -7,6 +7,7 @@ from maibot_sdk.types import HookMode
 
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
+from huoxing.forward import format_forward_hit
 
 
 class HuoxingPlugin(MaiBotPlugin):
@@ -34,6 +35,21 @@ class HuoxingPlugin(MaiBotPlugin):
         raw = message.get("raw_message", [])
         if not isinstance(raw, list):
             return
+        try:
+            forward_results = await self.worker.check_forward(raw,
+                scope=f"{platform}:{group}", message_id=str(msg_id))
+            for result in forward_results or []:
+                text = format_forward_hit(result)
+                if not text:
+                    continue
+                stream_id = kwargs.get("stream_id") or info.get("stream_id")
+                if stream_id:
+                    await self.ctx.send.text(text, str(stream_id))
+                else:
+                    self.ctx.logger.info("整包顶层查重命中：%s", result.first_message_id)
+                return
+        except (ValueError, OSError, RuntimeError) as exc:
+            self.ctx.logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
         for part, segment in enumerate(raw[:32]):
             if not isinstance(segment, dict) or segment.get("type") not in ("image", "emoji"):
                 continue

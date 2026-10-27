@@ -281,6 +281,59 @@ Result Detector::ingest(const cv::Mat& rgb,const std::string& scope,const std::s
 }
 void Detector::delete_scope(const std::string& scope) const {
     Db db(path_);Transaction tx(db);
+    Statement fq(db,"DELETE FROM forward_occurrences WHERE scope=?");fq.bind(1,scope);fq.step();
     Statement q(db,"DELETE FROM images WHERE scope=?");q.bind(1,scope);q.step();tx.commit();
+}
+ForwardResult Detector::ingest_forward(const std::string& scope,const std::string& message,
+    int part,const std::string& resource_namespace,const std::string& resource_id,
+    const std::string& visible_card) const {
+    if(scope.empty()||message.empty()||part<0||resource_namespace.empty())
+        throw std::invalid_argument("scope/message/namespace required; part >=0");
+    if(resource_id.size()>4096||visible_card.size()>65536)
+        throw std::invalid_argument("Top-level forward metadata too large");
+    // 哈希只针对已由 adapter 白名单提取的可见卡片摘要，不对聊天记录内容取哈希。
+    std::string card_digest;
+    if(!visible_card.empty()) {
+        std::array<unsigned char,EVP_MAX_MD_SIZE> bytes{};
+        unsigned int size=0;
+        if(EVP_Digest(visible_card.data(),visible_card.size(),bytes.data(),&size,EVP_sha256(),nullptr)!=1)
+            throw std::runtime_error("Card hash failed");
+        std::ostringstream out;
+        for(unsigned int i=0;i<size;++i) out<<std::hex<<std::setw(2)<<std::setfill('0')<<int(bytes[i]);
+        card_digest=out.str();
+    }
+    Db db(path_);Transaction tx(db);
+    ForwardResult r;
+    {
+        Statement old(db,"SELECT status,matched_occurrence FROM forward_occurrences WHERE scope=? AND message_id=? AND part=?");
+        old.bind(1,scope);old.bind(2,message);old.bind(3,std::int64_t(part));
+        if(old.step()) {
+            r.status=old.text(0);r.replayed=true;
+            auto match=old.integer(1);
+            if(match) {
+                Statement q(db,"SELECT message_id,received_at FROM forward_occurrences WHERE id=?");
+                q.bind(1,match);if(q.step()) {r.first_message_id=q.text(0);r.first_seen=q.text(1);}
+            }
+            return r;
+        }
+    }
+    std::int64_t match=0;
+    if(!resource_id.empty()) {
+        Statement q(db,"SELECT id,message_id,received_at FROM forward_occurrences WHERE scope=? AND resource_namespace=? AND resource_id=? ORDER BY id LIMIT 1");
+        q.bind(1,scope);q.bind(2,resource_namespace);q.bind(3,resource_id);
+        if(q.step()) {match=q.integer(0);r.first_message_id=q.text(1);r.first_seen=q.text(2);r.status="same_resource";}
+    }
+    if(!match&&!card_digest.empty()) {
+        Statement q(db,"SELECT id,message_id,received_at FROM forward_occurrences WHERE scope=? AND card_digest=? ORDER BY id LIMIT 1");
+        q.bind(1,scope);q.bind(2,card_digest);
+        if(q.step()) {match=q.integer(0);r.first_message_id=q.text(1);r.first_seen=q.text(2);r.status="possible_same_card";}
+    }
+    if(r.status.empty()) r.status=resource_id.empty()?"insufficient_evidence":"new_resource";
+    // 无标识且无摘要无法形成可比记录；不把空值当成重复依据。
+    if(resource_id.empty()&&card_digest.empty()) return r;
+    Statement add(db,"INSERT INTO forward_occurrences(scope,message_id,part,resource_namespace,resource_id,card_digest,status,matched_occurrence) VALUES(?,?,?,?,?,?,?,NULLIF(?,0))");
+    add.bind(1,scope);add.bind(2,message);add.bind(3,std::int64_t(part));add.bind(4,resource_namespace);
+    add.bind(5,resource_id);add.bind(6,card_digest);add.bind(7,r.status);add.bind(8,match);add.step();
+    tx.commit();return r;
 }
 }

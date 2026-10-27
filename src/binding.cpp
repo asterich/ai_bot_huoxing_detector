@@ -4,6 +4,11 @@
 #include <pybind11/pybind11.h>
 namespace py=pybind11;
 PYBIND11_MODULE(_native,m) {
+    py::class_<huoxing::ForwardResult>(m,"ForwardResult")
+        .def_readonly("status",&huoxing::ForwardResult::status)
+        .def_readonly("replayed",&huoxing::ForwardResult::replayed)
+        .def_readonly("first_message_id",&huoxing::ForwardResult::first_message_id)
+        .def_readonly("first_seen",&huoxing::ForwardResult::first_seen);
     py::class_<huoxing::Evidence>(m,"Evidence")
         .def_readonly("method",&huoxing::Evidence::method)
         .def_readonly("inliers",&huoxing::Evidence::inliers)
@@ -35,5 +40,8 @@ PYBIND11_MODULE(_native,m) {
             return d.ingest(owned,scope,message,sender,part);
         },py::arg("rgb").noconvert(),py::arg("scope"),py::arg("message_id"),
           py::arg("sender_id")="",py::arg("part")=0)
-        .def("delete_scope",&huoxing::Detector::delete_scope,py::call_guard<py::gil_scoped_release>());
+        .def("delete_scope",&huoxing::Detector::delete_scope,py::call_guard<py::gil_scoped_release>())
+        .def("ingest_forward",&huoxing::Detector::ingest_forward,
+             py::arg("scope"),py::arg("message_id"),py::arg("part"),py::arg("resource_namespace"),
+             py::arg("resource_id"),py::arg("visible_card")="",py::call_guard<py::gil_scoped_release>());
 }

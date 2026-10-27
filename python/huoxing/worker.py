@@ -9,10 +9,16 @@ class ImageWorker:
         self._task = None
 
     async def check(self, data, **metadata):
+        return await self._run(partial(self.detector.ingest, data, **metadata))
+
+    async def check_forward(self, segments, **metadata):
+        from .forward import check_top_level
+        return await self._run(partial(check_top_level, self.detector, segments, **metadata))
+
+    async def _run(self, operation):
         if self._task is not None and not self._task.done():
             return None
-        task = asyncio.create_task(asyncio.to_thread(
-            partial(self.detector.ingest, data, **metadata)))
+        task = asyncio.create_task(asyncio.to_thread(operation))
         self._task = task
         # 即使宿主取消了等待，也检索异常，且等线程完成才接受下一个任务。
         task.add_done_callback(lambda done: done.exception() if not done.cancelled() else None)

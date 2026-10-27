@@ -9,6 +9,7 @@ from astrbot.api.star import Context, Star, StarTools
 
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
+from huoxing.forward import format_forward_hit
 
 
 def read_image(path):
@@ -30,6 +31,25 @@ class HuoxingPlugin(Star):
         if not msg_id:
             return
         hits = []
+        outer = []
+        for segment in event.get_messages()[:32]:
+            kind = str(getattr(getattr(segment, "type", None), "value", "")).lower()
+            if kind == "forward":
+                outer.append({"type": "forward", "data": {"id": getattr(segment, "id", "")}})
+            elif kind == "json":
+                outer.append({"type": "json", "data": {"data": getattr(segment, "data", None)}})
+            else:
+                outer.append(None)  # 不调用 Node/Nodes.to_dict()，它可能展开内部媒体。
+        try:
+            forward_results = await self.worker.check_forward(outer,
+                scope=f"qq:{event.get_self_id()}:{group}", message_id=msg_id)
+            for result in forward_results or []:
+                text = format_forward_hit(result)
+                if text:
+                    hits.append(text)
+                    break
+        except (ValueError, OSError, RuntimeError) as exc:
+            logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
         # 只遍历最顶层 Image；Node、Nodes、Forward、Reply 内部均不访问。
         for part, segment in enumerate(event.get_messages()[:32]):
             if not isinstance(segment, Image):

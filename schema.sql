@@ -18,3 +18,14 @@ CREATE TABLE IF NOT EXISTS occurrences(
  UNIQUE(scope,message_id,part)
 );
 CREATE INDEX IF NOT EXISTS idx_occurrences_image ON occurrences(image_id,id);
+-- 仅顶层资源标识和可见卡片摘要；不存包内节点、消息或图片。
+CREATE TABLE IF NOT EXISTS forward_occurrences(
+ id INTEGER PRIMARY KEY, scope TEXT NOT NULL, message_id TEXT NOT NULL,
+ part INTEGER NOT NULL CHECK(part>=0), resource_namespace TEXT NOT NULL,
+ resource_id TEXT NOT NULL, card_digest TEXT NOT NULL,
+ status TEXT NOT NULL, matched_occurrence INTEGER REFERENCES forward_occurrences(id),
+ received_at TEXT NOT NULL DEFAULT(strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+ UNIQUE(scope,message_id,part)
+);
+CREATE INDEX IF NOT EXISTS idx_forward_resource ON forward_occurrences(scope,resource_namespace,resource_id,id);
+CREATE INDEX IF NOT EXISTS idx_forward_card ON forward_occurrences(scope,card_digest,id);

@@ -1,0 +1,29 @@
+[workspace]
+name = "huoxing-detector"
+version = "0.2.0"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+gxx_linux-64 = "16.1.*"
+gcc_linux-64 = "16.1.*"
+cmake = ">=3.30,<5"
+ninja = ">=1.12,<2"
+libopencv = ">=4.10,<5"
+sqlite = ">=3.45,<4"
+openssl = ">=3,<4"
+python = "3.12.*"
+numpy = ">=1.26,<3"
+pillow = ">=10,<14"
+pybind11 = ">=2.13,<4"
+scikit-build-core = ">=0.10,<1"
+pip = ">=24"
+pytest = ">=8,<10"
+
+[tasks]
+configure = "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -Dpybind11_DIR=$CONDA_PREFIX/share/cmake/pybind11"
+build = { cmd = "cmake --build build -j 2", depends-on = ["configure"] }
+test-cpp = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["build"] }
+install = "python -m pip install --no-deps --no-build-isolation -e ."
+test-python = { cmd = "python -m pytest tests/python -q", depends-on = ["install"] }
+test = { depends-on = ["test-cpp", "test-python"] }

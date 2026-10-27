@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from ._native import Detector as NativeDetector
+from ._native import ForwardDetector as NativeForwardDetector
 
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PIXELS = 16_000_000
@@ -15,6 +16,7 @@ MAX_PIXELS = 16_000_000
 class Detector:
     def __init__(self, db_path="data/huoxing.sqlite", max_images=2000):
         self.native = NativeDetector(str(Path(db_path).resolve()), max_images)
+        self.forward_native = NativeForwardDetector(str(Path(db_path).resolve()))
 
     def ingest(self, data: bytes, *, scope: str, message_id: str,
                sender_id: str = "", part: int = 0):
@@ -35,6 +37,7 @@ class Detector:
 
     def delete_scope(self, scope: str):
         self.native.delete_scope(scope)
+        self.forward_native.delete_scope(scope)
 
 
 def result_dict(result):

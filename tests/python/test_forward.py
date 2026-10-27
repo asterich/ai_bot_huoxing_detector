@@ -46,6 +46,8 @@ def test_unknown_and_preview_collision(tmp_path):
     assert check(d, [card("")], "3")[0].status == "possible_same_card"
     assert envelope({"type": "json", "data": {"data": "{"}}) is None
     assert envelope({"type": "json", "data": {"data": "x" * 65537}}) is None
+    assert envelope({"type": 123}) is None
+    assert envelope({"type": "forward", "data": {"id": "x" * 4097}}).resource_id == ""
 
 
 def test_clean_scope(tmp_path):

@@ -19,11 +19,18 @@ pybind11 = ">=2.13,<4"
 scikit-build-core = ">=0.10,<1"
 pip = ">=24"
 pytest = ">=8,<10"
+clang-format = ">=20,<23"
+clangxx_linux-64 = "21.1.*"
+clang-tools = "21.1.*"
 
 [tasks]
-configure = "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -Dpybind11_DIR=$CONDA_PREFIX/share/cmake/pybind11"
-build = { cmd = "cmake --build build -j 2", depends-on = ["configure"] }
-test-cpp = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["build"] }
-install = "python -m pip install --no-deps --no-build-isolation -e ."
-test-python = { cmd = "python -m pytest tests/python -q", depends-on = ["install"] }
-test = { depends-on = ["test-cpp", "test-python"] }
+configure-gcc = "cmake -S . -B build/gcc -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-c++ -Dpybind11_DIR=$CONDA_PREFIX/share/cmake/pybind11"
+configure-clang = "cmake -S . -B build/clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=$CONDA_PREFIX/bin/clang++-21 -Dpybind11_DIR=$CONDA_PREFIX/share/cmake/pybind11"
+build-gcc = { cmd = "cmake --build build/gcc -j 2", depends-on = ["configure-gcc"] }
+build-clang = { cmd = "cmake --build build/clang -j 2", depends-on = ["configure-clang"] }
+test-gcc = { cmd = "python tools/test_build.py gcc", depends-on = ["build-gcc"] }
+test-clang = { cmd = "python tools/test_build.py clang", depends-on = ["build-clang"] }
+install = "CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-c++ python -m pip install --no-deps --no-build-isolation -e ."
+test = { depends-on = ["format-check", "test-gcc", "test-clang"] }
+format = "python tools/format_cpp.py"
+format-check = "python tools/format_cpp.py --check"

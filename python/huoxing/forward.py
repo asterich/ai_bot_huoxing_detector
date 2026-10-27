@@ -14,14 +14,22 @@ def _string(value, limit=4096):
     return value.strip()[:limit] if isinstance(value, str) else ""
 
 
+def _resource_id(value):
+    # 不截断不透明资源 ID：截断可能把两个不同资源变成同一个标识。
+    return value if isinstance(value, str) and 0 < len(value) <= 4096 else ""
+
+
 def envelope(segment) -> Envelope | None:
     if not isinstance(segment, dict):
         return None
-    kind = segment.get("type", "").lower()
+    kind = segment.get("type")
+    if not isinstance(kind, str):
+        return None
+    kind = kind.lower()
     data = segment.get("data", {})
     if kind == "forward" and isinstance(data, dict):
         # 不访问 data.content / messages / nodes。
-        return Envelope("onebot11:forward-id", _string(data.get("id")))
+        return Envelope("onebot11:forward-id", _resource_id(data.get("id")))
     if kind != "json":
         return None
     payload = data.get("data") if isinstance(data, dict) else data
@@ -48,7 +56,7 @@ def envelope(segment) -> Envelope | None:
     card = json.dumps(visible, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     if not visible["source"] and not visible["summary"] and not any(news):
         card = ""
-    return Envelope("qq:multimsg-resid", _string(detail.get("resid")), card)
+    return Envelope("qq:multimsg-resid", _resource_id(detail.get("resid")), card)
 
 
 def check_top_level(detector, segments, *, scope, message_id):
@@ -60,7 +68,7 @@ def check_top_level(detector, segments, *, scope, message_id):
         item = envelope(segment)
         if item is None:
             continue
-        result = detector.native.ingest_forward(scope, message_id, part,
+        result = detector.forward_native.ingest(scope, message_id, part,
             item.namespace, item.resource_id, item.visible_card)
         results.append(result)
     return results

@@ -26,7 +26,8 @@ int main() {
     auto path=std::filesystem::temp_directory_path()/
         ("huoxing-test-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".sqlite");
     try {
-        auto im=fixture(42),f=huoxing::extract(im);
+        auto im=fixture(42);
+        auto f=huoxing::extract(im);
         auto crop=im(cv::Rect(100,70,450,350)).clone();
         auto cf=huoxing::extract(crop);
         require(huoxing::compare(f,cf).has_value(),"crop");

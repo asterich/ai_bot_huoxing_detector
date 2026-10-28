@@ -1,11 +1,8 @@
 module;
-#include <cstdint>
 #include <opencv2/core.hpp>
-#include <stdexcept>
-#include <string>
-#include <utility>
 
 export module huoxing.detector;
+import std;
 import huoxing.types;
 import huoxing.features;
 import huoxing.matching;
@@ -16,6 +13,7 @@ export namespace huoxing {
 // Orchestrates image matching. Persistence and transaction details stay in the database module.
 class Detector {
   public:
+
     explicit Detector(std::string path, int max_images = 2000)
         : path_(std::move(path)), max_images_(max_images) {
         if (path_.empty() || path_ == ":memory:" || max_images_ < 1) {
@@ -24,8 +22,13 @@ class Detector {
         storage::ImageRepository::initialize(path_);
     }
 
-    Result ingest(const cv::Mat& rgb, const std::string& scope, const std::string& message_id,
-                  const std::string& sender_id = "", int part = 0) const {
+    Result ingest(
+        const cv::Mat& rgb,
+        std::string_view scope,
+        std::string_view message_id,
+        std::string_view sender_id = "",
+        int part = 0
+    ) const {
         if (scope.empty() || message_id.empty() || part < 0) {
             throw std::invalid_argument("scope/message_id required; part >=0");
         }
@@ -66,13 +69,14 @@ class Detector {
     }
 
     // Authentication belongs to the host plugin, before this maintenance entry point is called.
-    void delete_scope(const std::string& scope) const {
+    void delete_scope(std::string_view scope) const {
         storage::ImageRepository repository(path_);
         repository.delete_scope(scope);
         repository.commit();
     }
 
   private:
+
     std::string path_;
     int max_images_;
 };

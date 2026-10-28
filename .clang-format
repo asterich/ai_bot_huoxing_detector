@@ -9,3 +9,15 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 BreakBeforeBraces: Attach
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: OnePerLine
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BreakBeforeBinaryOperators: NonAssignment
+AlignOperands: AlignAfterOperator
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: Always
+EmptyLineAfterAccessModifier: Always
+MaxEmptyLinesToKeep: 1
+InsertBraces: true

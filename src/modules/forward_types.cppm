@@ -1,8 +1,7 @@
 module;
-#include <cstdint>
-#include <string>
 
 export module huoxing.forward_types;
+import std;
 
 export namespace huoxing {
 // The status describes top-level evidence, never equality of hidden message content.

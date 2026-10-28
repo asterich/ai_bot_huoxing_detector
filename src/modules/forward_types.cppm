@@ -1,5 +1,3 @@
-module;
-
 export module huoxing.forward_types;
 import std;
 

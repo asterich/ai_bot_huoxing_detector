@@ -1,17 +1,14 @@
-module;
-#include <opencv2/core.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/imgproc.hpp>
-
 export module huoxing.features;
 import std;
+import huoxing.vision;
 import huoxing.types;
 import huoxing.hashing;
 
 export namespace huoxing {
 
 Feature extract(const cv::Mat& rgb) {
-    if (rgb.type() != CV_8UC3 || rgb.rows < 16 || rgb.cols < 16 || rgb.total() > 16000000) {
+    if (rgb.type() != huoxing::vision::rgb_type || rgb.rows < 16 || rgb.cols < 16
+        || rgb.total() > 16000000) {
         throw std::invalid_argument("Expected RGB uint8, dimensions >=16 and <=16M pixels");
     }
 
@@ -31,7 +28,7 @@ Feature extract(const cv::Mat& rgb) {
     cv::SIFT::create(1000)
         ->detectAndCompute(feature.gray, cv::noArray(), keypoints, feature.descriptors);
 
-    feature.points = cv::Mat(static_cast<int>(keypoints.size()), 1, CV_32FC2);
+    feature.points = cv::Mat(static_cast<int>(keypoints.size()), 1, huoxing::vision::point_type);
     for (const auto index : std::views::iota(0, static_cast<int>(keypoints.size()))) {
         const auto location = keypoints[index].pt;
         feature.points.at<cv::Vec2f>(index) = {location.x, location.y};
@@ -39,7 +36,7 @@ Feature extract(const cv::Mat& rgb) {
 
     // Keep the empty descriptor shape consistent with the persisted feature format.
     if (feature.descriptors.empty()) {
-        feature.descriptors = cv::Mat(0, 128, CV_32F);
+        feature.descriptors = cv::Mat(0, 128, huoxing::vision::descriptor_type);
     }
 
     return feature;

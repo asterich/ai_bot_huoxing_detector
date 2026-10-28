@@ -1,7 +1,7 @@
-#include <fmt/format.h>
-#include <opencv2/imgproc.hpp>
 
 import std;
+import huoxing.format;
+import huoxing.vision;
 import huoxing;
 import huoxing.hashing;
 import huoxing.sqlite;
@@ -44,7 +44,7 @@ class TemporaryDatabase {
 };
 
 cv::Mat fixture(int seed) {
-    cv::Mat image(480, 640, CV_8UC3, cv::Scalar(235, 230, 218));
+    cv::Mat image(480, 640, huoxing::vision::rgb_type, cv::Scalar(235, 230, 218));
     cv::RNG random(seed);
     for ([[maybe_unused]] const auto index : std::views::iota(0, 180)) {
         const cv::Point location{random.uniform(10, 600), random.uniform(10, 440)};
@@ -55,7 +55,8 @@ cv::Mat fixture(int seed) {
             cv::Scalar(random.uniform(0, 230), random.uniform(0, 230), random.uniform(0, 230)),
             -1
         );
-        cv::line(image, location, location + cv::Point(15, 20), cv::Scalar(0, 0, 0), 2);
+        const cv::Point line_end{location.x + 15, location.y + 20};
+        cv::line(image, location, line_end, cv::Scalar(0, 0, 0), 2);
     }
     cv::putText(image, "MEME TEST", {40, 240}, cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 0), 2);
     return image;
@@ -190,7 +191,7 @@ int main() {
         );
         return 0;
     } catch (const std::exception& error) {
-        fmt::println(stderr, "{}", error.what());
+        huoxing::formatting::report_error(error.what());
         return 1;
     }
 }

@@ -1,10 +1,11 @@
 module;
-#include <fmt/format.h>
-#include <opencv2/core.hpp>
+#include "std_compat.hpp"
 #include <openssl/evp.h>
 
 export module huoxing.hashing;
 import std;
+import huoxing.format;
+import huoxing.vision;
 
 namespace {
 

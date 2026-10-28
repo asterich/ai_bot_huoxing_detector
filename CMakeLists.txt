@@ -35,6 +35,8 @@ configure_file(src/schema.hpp.in generated/schema.hpp @ONLY)
 add_library(huoxing_core)
 target_sources(huoxing_core PUBLIC FILE_SET CXX_MODULES FILES
   src/modules/types.cppm
+  src/modules/vision.cppm
+  src/modules/format.cppm
   src/modules/hashing.cppm
   src/modules/sqlite.cppm
   src/modules/features.cppm
@@ -46,7 +48,7 @@ target_sources(huoxing_core PUBLIC FILE_SET CXX_MODULES FILES
   src/modules/forward_types.cppm
   src/modules/forward_database.cppm
   src/modules/forward.cppm)
-target_include_directories(huoxing_core PUBLIC ${OpenCV_INCLUDE_DIRS} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_include_directories(huoxing_core PUBLIC ${OpenCV_INCLUDE_DIRS} PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
 if(TARGET SQLite3::SQLite3)
   set(HUOXING_SQLITE_TARGET SQLite3::SQLite3)
 else()

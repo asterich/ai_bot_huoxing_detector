@@ -1,6 +1,6 @@
 # 火星梗图检测器
 
-QQ群梗图改图查重。核心使用 **C++26 named modules**，支持 **GCC ≥16.1 / Clang ≥21**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、原生库和 Python 环境。锁定环境以 GCC 16.1 和 Clang 21 为验证基线。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
+QQ群梗图改图查重。核心使用 **C++26 named modules / import std**，支持 **GCC ≥16.1 / Clang ≥21**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、fmt、原生库和 Python 环境。锁定环境以 GCC 16.1 和 Clang 21 为验证基线。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
 
 目标平台是 Linux x86_64；Windows 使用 WSL2。原生 Windows/MSVC 不在当前构建目标内。
 
@@ -56,8 +56,12 @@ print(result_dict(result))
 src/modules/huoxing.cppm  C++ 公共入口：import huoxing;
 src/modules/types.cppm    结果、特征及证据值类型
 src/modules/features.cppm RGB 哈希、灰度缩放、SIFT 提取
+src/modules/hashing.cppm  公共 SHA-256 和 fmt 编码
+src/modules/vision.cppm   OpenCV 唯一声明与类型常量导出边界
+src/modules/format.cppm   fmt 唯一声明与格式化输出边界
 src/modules/matching.cppm 双向特征匹配、RANSAC、像素验证
-src/modules/database.cppm SQLite RAII、Repository、查询及持久化
+src/modules/sqlite.cppm   SQLite RAII、借用视图的绑定与复制
+src/modules/database.cppm 图片 Repository、查询及持久化
 src/modules/detector.cppm 检测流程编排，不含 SQL
 src/binding.cpp          pybind11
 schema.sql               唯一 schema 来源，构建时嵌入核心
@@ -86,6 +90,6 @@ pixi.toml / pixi.lock     环境声明与锁文件
 
 工具参考：[GCC C++26 支持](https://gcc.gnu.org/projects/cxx-status.html)、[pybind11 构建](https://pybind11.readthedocs.io/en/stable/cmake/)。GCC 对 C++26 的支持仍包含实验性部分；本项目明确开启 `-std=c++26`，未依赖反射等额外实验开关。
 
-CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。第三方 C 库、OpenCV、标准库头文件位于 global module fragment；项目接口通过 named modules 导出。不使用 `import std`，避免依赖不同标准库的标准模块打包差异。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
+CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。项目源码通过 `import std;` 使用标准库；CMake 从工具链的 libstdc++ 标准模块源码生成 BMI。第三方 C 库、OpenCV、fmt 等头文件位于 global module fragment。Pixi 固定 CMake 4.4.4 及其标准模块实验开关，详细约定见 [STYLE.md](docs/STYLE.md)。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
 
 本功能分支还提供整包聊天记录顶层查重，见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 编排资源 ID / 可见卡片证据，`huoxing.forward_database` 独立持久化；两者均不获取或展开包内消息。使用本分支时将上面的 `git switch` 改为 `codex/forward-top-level`。

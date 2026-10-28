@@ -1,8 +1,9 @@
-#include <opencv2/core.hpp>
+#include "std_compat.hpp"
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
 import std;
+import huoxing.vision;
 import huoxing;
 
 namespace py = pybind11;
@@ -52,7 +53,7 @@ huoxing::Result ingest_python_array(
     const cv::Mat borrowed_rgb(
         static_cast<int>(buffer.shape[0]),
         static_cast<int>(buffer.shape[1]),
-        CV_8UC3,
+        huoxing::vision::rgb_type,
         buffer.ptr
     );
     const auto owned_rgb = borrowed_rgb.clone();

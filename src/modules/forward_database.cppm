@@ -1,5 +1,3 @@
-module;
-
 export module huoxing.forward_database;
 import std;
 import huoxing.sqlite;

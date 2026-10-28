@@ -1,8 +1,6 @@
-module;
-#include <opencv2/core.hpp>
-
 export module huoxing.types;
 import std;
+import huoxing.vision;
 
 export namespace huoxing {
 

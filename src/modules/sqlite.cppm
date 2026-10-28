@@ -1,9 +1,10 @@
 module;
-#include <fmt/format.h>
+#include "std_compat.hpp"
 #include <sqlite3.h>
 
 export module huoxing.sqlite;
 import std;
+import huoxing.format;
 
 export namespace huoxing::storage {
 

@@ -1,8 +1,6 @@
-module;
-#include <opencv2/core.hpp>
-
 export module huoxing.detector;
 import std;
+import huoxing.vision;
 import huoxing.types;
 import huoxing.features;
 import huoxing.matching;

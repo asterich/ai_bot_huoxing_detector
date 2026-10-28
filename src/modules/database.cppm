@@ -1,11 +1,10 @@
 module;
 #include "schema.hpp"
-#include <fmt/format.h>
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
 
 export module huoxing.database;
 import std;
+import huoxing.format;
+import huoxing.vision;
 import huoxing.types;
 import huoxing.sqlite;
 
@@ -54,8 +53,8 @@ huoxing::Feature decode_feature(huoxing::storage::Statement& row) {
         throw std::runtime_error("Corrupt gray image");
     }
 
-    feature.points = read_matrix(3, point_count, 1, CV_32FC2);
-    feature.descriptors = read_matrix(4, point_count, 128, CV_32F);
+    feature.points = read_matrix(3, point_count, 1, huoxing::vision::point_type);
+    feature.descriptors = read_matrix(4, point_count, 128, huoxing::vision::descriptor_type);
     return feature;
 }
 

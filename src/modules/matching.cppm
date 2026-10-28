@@ -1,11 +1,6 @@
-module;
-#include <opencv2/calib3d.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/imgproc.hpp>
-
 export module huoxing.matching;
 import std;
+import huoxing.vision;
 import huoxing.types;
 
 namespace {
@@ -67,10 +62,10 @@ collect_mutual_matches(const huoxing::Feature& query, const huoxing::Feature& ca
         const auto query_point = keypoint_at(query.points, match.queryIdx);
         const auto candidate_point = keypoint_at(candidate.points, match.trainIdx);
         const std::array location_key{
-            cvRound(query_point.x),
-            cvRound(query_point.y),
-            cvRound(candidate_point.x),
-            cvRound(candidate_point.y)
+            huoxing::vision::round_coordinate(query_point.x),
+            huoxing::vision::round_coordinate(query_point.y),
+            huoxing::vision::round_coordinate(candidate_point.x),
+            huoxing::vision::round_coordinate(candidate_point.y)
         };
         if (unique_locations.insert(location_key).second) {
             result.query.push_back(query_point);
@@ -160,12 +155,12 @@ verify_pixels(const cv::Mat& query, const cv::Mat& candidate, const cv::Mat& hom
     // Erode the validity mask so interpolation at the crop boundary does not count as evidence.
     cv::Mat valid;
     cv::warpPerspective(
-        cv::Mat(query.size(), CV_8U, cv::Scalar(255)),
+        cv::Mat(query.size(), huoxing::vision::gray_type, cv::Scalar(255)),
         valid,
         homography,
         candidate.size()
     );
-    cv::erode(valid, valid, cv::Mat::ones(5, 5, CV_8U));
+    cv::erode(valid, valid, cv::Mat::ones(5, 5, huoxing::vision::gray_type));
     cv::threshold(valid, valid, 250, 255, cv::THRESH_BINARY);
 
     const auto valid_pixels = cv::countNonZero(valid);

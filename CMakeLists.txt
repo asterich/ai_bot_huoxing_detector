@@ -35,6 +35,9 @@ configure_file(src/schema.hpp.in generated/schema.hpp @ONLY)
 add_library(huoxing_core)
 target_sources(huoxing_core PUBLIC FILE_SET CXX_MODULES FILES
   src/modules/types.cppm
+  src/modules/messages.cppm
+  src/modules/repository.cppm
+  src/modules/repository_sqlite.cppm
   src/modules/vision.cppm
   src/modules/format.cppm
   src/modules/hashing.cppm

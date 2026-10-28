@@ -1,5 +1,7 @@
 export module huoxing;
 export import huoxing.vision;
+export import huoxing.messages;
+export import huoxing.repository;
 export import huoxing.types;
 export import huoxing.features;
 export import huoxing.matching;

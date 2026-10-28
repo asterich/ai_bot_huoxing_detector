@@ -22,6 +22,8 @@ struct Result {
     std::string first_sender_id;
     std::string first_seen;
     Evidence evidence;
+    std::string message_hash;
+    std::string hash_basis;
 };
 
 struct Feature {

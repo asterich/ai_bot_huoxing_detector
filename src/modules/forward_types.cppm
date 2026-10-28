@@ -8,6 +8,8 @@ struct ForwardResult {
     bool replayed = false;
     std::string first_message_id;
     std::string first_seen;
+    std::string message_hash;
+    std::string hash_basis;
 };
 
 struct ForwardMatch {

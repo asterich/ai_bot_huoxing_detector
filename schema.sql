@@ -29,3 +29,9 @@ CREATE TABLE IF NOT EXISTS forward_occurrences(
 CREATE INDEX IF NOT EXISTS idx_forward_resource
  ON forward_occurrences(scope,resource_namespace,resource_id,id);
 CREATE INDEX IF NOT EXISTS idx_forward_card ON forward_occurrences(scope,card_digest,id);
+-- A common, versioned message-identity index. Legacy image/forward tables remain authoritative.
+CREATE TABLE IF NOT EXISTS message_hashes(
+ scope TEXT NOT NULL, kind INTEGER NOT NULL, digest TEXT NOT NULL,
+ basis INTEGER NOT NULL, storage_id INTEGER NOT NULL, sender_id TEXT NOT NULL DEFAULT '',
+ PRIMARY KEY(scope,kind,digest)
+);

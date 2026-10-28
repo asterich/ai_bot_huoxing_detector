@@ -84,8 +84,7 @@ export namespace huoxing::storage {
 class ImageRepository {
   public:
 
-    explicit ImageRepository(std::string_view path)
-        : connection_(path), transaction_(connection_) {}
+    explicit ImageRepository(Connection& connection) : connection_(connection) {}
 
     static void initialize(std::string_view path) {
         auto parent = std::filesystem::path(path).parent_path();
@@ -233,13 +232,8 @@ class ImageRepository {
         remove.step();
     }
 
-    void commit() {
-        transaction_.commit();
-    }
-
   private:
 
-    Connection connection_;
-    Transaction transaction_;
+    Connection& connection_;
 };
 } // namespace huoxing::storage

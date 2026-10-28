@@ -9,8 +9,7 @@ export namespace huoxing::storage {
 class ForwardRepository {
   public:
 
-    explicit ForwardRepository(std::string_view path)
-        : connection_(path), transaction_(connection_) {}
+    explicit ForwardRepository(Connection& connection) : connection_(connection) {}
 
     std::optional<ForwardResult>
     find_replay(std::string_view scope, std::string_view message_id, int part) {
@@ -70,7 +69,7 @@ class ForwardRepository {
         return read_match(query);
     }
 
-    void insert(
+    std::int64_t insert(
         std::string_view scope,
         std::string_view message_id,
         int part,
@@ -95,16 +94,13 @@ class ForwardRepository {
         query.bind(7, status);
         query.bind(8, matched_id);
         query.step();
+        return connection_.last_insert_id();
     }
 
     void delete_scope(std::string_view scope) {
         Statement query(connection_, "DELETE FROM forward_occurrences WHERE scope=?");
         query.bind(1, scope);
         query.step();
-    }
-
-    void commit() {
-        transaction_.commit();
     }
 
   private:
@@ -116,7 +112,6 @@ class ForwardRepository {
         return ForwardMatch{query.integer(0), query.text(1), query.text(2)};
     }
 
-    Connection connection_;
-    Transaction transaction_;
+    Connection& connection_;
 };
 } // namespace huoxing::storage

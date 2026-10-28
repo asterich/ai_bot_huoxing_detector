@@ -17,6 +17,8 @@
 
 ## 验证转发后是否变化
 
-在测试群发送同一包，分别用 QQ 的再次转发、重新合并打包两种方式发送。只收集外层 `type`、`forward.data.id` 或卡片 `resid` 以及返回状态；不要调用下载整包接口。比较两次 ID：若相同则 `same_resource`，若变化则最多 `possible_same_card`。这需要真实 QQ/NapCat 版本验证，项目不预先声称资源 ID 一定稳定。
+在测试群发送同一包，分别用 QQ 的再次转发、重新合并打包两种方式发送。只收集外层 `type`、`forward.data.id` 或卡片 `resid` 以及返回状态；不要调用下载整包接口。比较两次 ID：若相同则 `same_resource`，若变化则最多 `possible_same_card`。这需要真实 QQ 和所选适配器版本验证，项目不预先声称资源 ID 一定稳定。
+
+两类消息现在共用 `Detector.detect(Message(...))` 和带依据的 SHA-256 指纹；旧 `ForwardDetector` 入口保留。见 [统一架构与哈希说明](ARCHITECTURE.md)。哈希存在不代表顶层元数据足以识别内部内容，卡片指纹仍然只是弱证据。
 
 参考：[OneBot 消息段](https://github.com/botuniverse/onebot-11/blob/master/message/segment.md)、[公开 API](https://github.com/botuniverse/onebot-11/blob/master/api/public.md)、[NapCat 顶层多转发元素类型](https://github.com/NapNeko/NapCatQQ/blob/main/packages/napcat-core/types/msg.ts)。

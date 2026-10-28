@@ -6,7 +6,8 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
-from huoxing import Detector, result_dict
+from huoxing import (Detector, ForwardMessage, ImageMessage, Message,
+                     MessageContext, result_dict)
 
 
 def encode(image):
@@ -26,7 +27,22 @@ for _ in range(170):
 
 with tempfile.TemporaryDirectory(prefix="huoxing-demo-") as directory:
     detector = Detector(Path(directory) / "demo.sqlite")
-    detector.ingest(encode(image), scope="qq:demo:group", message_id="original", sender_id="alice")
-    result = detector.ingest(encode(image.crop((100, 70, 550, 420))),
-                             scope="qq:demo:group", message_id="cropped", sender_id="bob")
+    detector.detect(Message(
+        MessageContext("qq:demo:group", "original", "alice"),
+        ImageMessage(encode(image)),
+    ))
+    result = detector.detect(Message(
+        MessageContext("qq:demo:group", "cropped", "bob"),
+        ImageMessage(encode(image.crop((100, 70, 550, 420)))),
+    ))
+    assert result.duplicate and result.first_message_id == "original"
+    print(json.dumps(result_dict(result), ensure_ascii=False, indent=2))
+
+    # Simulated outer resource metadata; no QQ connection or package download.
+    forward = ForwardMessage("onebot11:forward-id", "demo-resource")
+    detector.detect(Message(MessageContext("qq:demo:group", "forward-1", "alice"), forward))
+    result = detector.detect(Message(
+        MessageContext("qq:demo:group", "forward-2", "bob"), forward,
+    ))
+    assert result.duplicate and result.first_message_id == "forward-1"
     print(json.dumps(result_dict(result), ensure_ascii=False, indent=2))

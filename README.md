@@ -11,7 +11,7 @@ QQ群梗图改图查重。核心使用 **C++26 named modules / import std**，�
 ```sh
 git clone https://github.com/asterich/ai_bot_huoxing_detector.git
 cd ai_bot_huoxing_detector
-git switch codex/cpp26-core
+git switch codex/forward-top-level
 pixi install --locked
 pixi run test
 pixi run install
@@ -23,7 +23,7 @@ pixi run huoxing cropped.png --scope qq:bot:group --message-id 101
 
 `pixi run test` 包含 `clang-format --dry-run --Werror` 检查、GCC 和 Clang 两套独立构建及 C++/Python 测试。`pixi run test-gcc`、`pixi run test-clang` 可分别验证；`pixi run format` 自动格式化。`pixi run install` 把 GCC 构建安装为本环境可导入的包。测试直接加载各构建目录产出的扩展，避免误测另一个编译器安装的版本。
 
-无需自备图片的演示：安装后运行 `pixi run python examples/demo.py`，会生成测试图、登记原图并检测裁剪版，输出匹配证据；演示数据库随后自动清理。
+无需自备图片的演示：安装后运行 `pixi run python examples/demo.py`，会生成测试图、登记原图并检测裁剪版，再演示同一顶层转发资源的重复检测，输出统一哈希和匹配证据；演示数据库随后自动清理。
 
 ```python
 from huoxing import Detector, result_dict
@@ -34,6 +34,8 @@ with open("meme.png", "rb") as f:
         scope="qq:机器人账号:群号", message_id="消息ID", sender_id="发送者QQ", part=0)
 print(result_dict(result))
 ```
+
+图片和整包转发也可使用统一的 `detector.detect(Message(...))`。`IDetector`、`Repository` 和 `RepositorySession` 定义接口；`Detector` 编排检测，`SqliteRepository` 实现存储。每条消息返回带依据的统一 SHA-256 指纹；整包转发只检查最顶层，不展开内部消息。见 [架构、统一哈希与调用示例](docs/ARCHITECTURE.md)。
 
 异步机器人应通过 `huoxing.worker.ImageWorker` 调用，避免阻塞事件循环。C++ binding 在复制输入后释放 GIL；Worker 只允许一个在途任务，忙时跳过，不建立无限队列。宿主取消等待后，已开始的后台任务仍可能登记图片，但不会因此启动更多后台任务。
 
@@ -55,6 +57,9 @@ print(result_dict(result))
 ```text
 src/modules/huoxing.cppm  C++ 公共入口：import huoxing;
 src/modules/types.cppm    结果、特征及证据值类型
+src/modules/messages.cppm 两种消息、上下文、统一指纹和检测结果
+src/modules/repository.cppm 抽象仓储及事务会话接口
+src/modules/repository_sqlite.cppm SQLite 实现与统一哈希索引
 src/modules/features.cppm RGB 哈希、灰度缩放、SIFT 提取
 src/modules/hashing.cppm  公共 SHA-256 和 fmt 编码
 src/modules/vision.cppm   OpenCV 唯一声明与类型常量导出边界
@@ -74,7 +79,7 @@ pixi.toml / pixi.lock     环境声明与锁文件
 .clang-format            C++ 统一格式约定
 ```
 
-`images` 保存群作用域、完整 RGB 哈希、灰度缩略图、局部点、描述子；`occurrences` 保存消息及分段序号、发送者、UTC 登记时间、匹配证据。`meta` 标识数据与特征格式。按群索引、唯一约束、外键及 `BEGIN IMMEDIATE` 保证先查再写的原子性；WAL 支持并发读取。每次调用使用独立数据库连接。
+`images` 保存群作用域、完整 RGB 哈希、灰度缩略图、局部点、描述子；`occurrences` 保存图片消息及匹配证据；`forward_occurrences` 保存整包顶层引用和可见卡片摘要；`message_hashes` 提供统一身份索引。`meta` 标识数据与特征格式。按群索引、唯一约束、外键及 `BEGIN IMMEDIATE` 保证先查再写的原子性；WAL 支持并发读取。每次调用使用独立数据库连接，同次检测的登记和索引共用一个事务。
 
 不保存原始彩色图片或完整聊天内容，但保存灰度缩略图、视觉特征和消息标识。管理员在宿主鉴权后可调用 `delete_scope(scope)` 删除本群图片及关联消息记录。C++/Python 原型数据库格式不兼容，不要混用原型数据库。
 
@@ -92,4 +97,4 @@ pixi.toml / pixi.lock     环境声明与锁文件
 
 CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。项目源码通过 `import std;` 使用标准库；CMake 从工具链的 libstdc++ 标准模块源码生成 BMI。第三方 C 库、OpenCV、fmt 等头文件位于 global module fragment。Pixi 固定 CMake 4.4.4 及其标准模块实验开关，详细约定见 [STYLE.md](docs/STYLE.md)。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
 
-本功能分支还提供整包聊天记录顶层查重，见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 编排资源 ID / 可见卡片证据，`huoxing.forward_database` 独立持久化；两者均不获取或展开包内消息。使用本分支时将上面的 `git switch` 改为 `codex/forward-top-level`。
+整包聊天记录顶层查重的状态和接入字段见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 是统一检测器的兼容入口，`huoxing.forward_database` 封装转发数据 SQL；均不获取或展开包内消息。

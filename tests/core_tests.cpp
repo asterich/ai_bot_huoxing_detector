@@ -5,6 +5,7 @@ import huoxing.vision;
 import huoxing;
 import huoxing.hashing;
 import huoxing.sqlite;
+import huoxing.repository_sqlite;
 
 namespace {
 
@@ -145,6 +146,40 @@ void test_concurrent_registration() {
     require(errors == 0 && originals == 1, "atomic concurrent registration");
 }
 
+void test_injected_interfaces() {
+    static_assert(std::is_abstract_v<huoxing::IDetector>);
+    static_assert(std::is_abstract_v<huoxing::Repository>);
+    static_assert(std::is_abstract_v<huoxing::RepositorySession>);
+
+    TemporaryDatabase file;
+    std::shared_ptr<huoxing::Repository> repository =
+        std::make_shared<huoxing::SqliteRepository>(file.path());
+    std::shared_ptr<huoxing::IDetector> detector = std::make_shared<huoxing::Detector>(repository);
+
+    // Both value types enter the same virtual interface with an injected backend.
+    const auto image = detector->detect(
+        huoxing::Message{{"group", "image", "alice", 0}, huoxing::ImageMessage{fixture(42)}}
+    );
+    const auto forward = detector->detect(
+        huoxing::Message{
+            {"group", "forward", "bob", 0},
+            huoxing::ForwardMessage{"onebot11:forward-id", "A", ""}
+        }
+    );
+    require(image.status == huoxing::DetectionStatus::New, "image through IDetector");
+    require(forward.status == huoxing::DetectionStatus::New, "forward through IDetector");
+
+    // The legacy facade can share this exact coordinator rather than open its own.
+    huoxing::ForwardDetector facade(detector);
+    const auto repeated = facade.ingest("group", "forward-2", 0, "onebot11:forward-id", "A");
+    require(repeated.status == "same_resource", "facade delegates to injected detector");
+    detector->delete_scope("group");
+    require(
+        facade.ingest("group", "forward-3", 0, "onebot11:forward-id", "A").status == "new_resource",
+        "scope cleanup through IDetector"
+    );
+}
+
 void test_hash_compatibility() {
     require(
         huoxing::hashing::sha256_text("abc")
@@ -185,6 +220,7 @@ int main() {
         test_borrowed_sqlite_views();
         test_image_matching();
         test_image_storage();
+        test_injected_interfaces();
         test_concurrent_registration();
         fmt::println(
             "C++ tests passed: hashing, string views, matching, persistence and concurrency"

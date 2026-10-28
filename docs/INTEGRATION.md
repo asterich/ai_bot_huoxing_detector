@@ -1,6 +1,12 @@
 # QQ 接入与插件流程
 
-本仓库不实现 QQ 登录协议。QQ → 已配置的 OneBot/NapCat 平台适配器 → AstrBot 或 MaiBot → Python 插件 → pybind11 → C++ 核心 → SQLite。
+本仓库不实现 QQ 登录协议。QQ → OneBot v11 适配器（例如 SnowLuma / NapCat）→ AstrBot 或 MaiBot → Python 插件 → pybind11 → C++ 核心 → SQLite。宿主应使用与所选适配器兼容的接收入口，检测核心不依赖具体登录实现。
+
+### SnowLuma 与 NapCat
+
+[SnowLuma 官方仓库](https://github.com/SnowLuma/SnowLuma) 声明支持 OneBot v11，可作为接入选项。它没有提供可与 NapCat 比较的账号风控率数据，因此本项目不声称更换适配器就能降低某个比例的风控概率。官方也明确说明属于未经腾讯授权的第三方项目。
+
+SnowLuma 当前采用源码可见的非商业许可，明确不属于 OSI 开源许可；商用或公开分发修改版需核对并取得所需授权。仅连接外部已部署的 OneBot 服务不需要把它的源码纳入本仓库。部署前应核对所用版本的许可和宿主兼容性。
 
 ## 环境
 

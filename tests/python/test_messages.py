@@ -88,6 +88,32 @@ def test_replay_hash_comes_from_stored_image(tmp_path):
     assert replay.message_hash == first.message_hash
 
 
+def test_forward_replay_keeps_registered_identity_and_first_sender(tmp_path):
+    detector = Detector(tmp_path / "messages.sqlite")
+    payload = ForwardMessage("qq", "A", "preview")
+    detector.detect(message(payload, "original", sender="alice"))
+    repeated = detector.detect(message(payload, "repost", sender="bob"))
+    replay = detector.detect(message(ForwardMessage("qq", "B"), "repost", sender="charlie"))
+    assert replay.replayed and replay.duplicate
+    assert replay.message_hash == repeated.message_hash
+    assert replay.first.message_id == "original"
+    assert replay.first.sender_id == "alice"
+
+
+def test_legacy_card_index_keeps_original_after_different_resource_ids(tmp_path):
+    path = tmp_path / "messages.sqlite"
+    detector = Detector(path)
+    detector.detect(message(ForwardMessage("qq", "A", "same preview"), "original"))
+    with sqlite3.connect(path) as connection:
+        connection.execute("DELETE FROM message_hashes")
+    for index, resource in enumerate(("B", "C")):
+        result = detector.detect(message(ForwardMessage("qq", resource, "same preview"), str(index)))
+        assert result.status == DetectionStatus.PossibleSameCard
+        assert result.first.message_id == "original"
+        # Legacy forward rows did not store senders; do not substitute the repost's sender.
+        assert result.first.sender_id == ""
+
+
 @pytest.mark.parametrize("kind", ["image", "forward"])
 def test_lazy_index_preserves_legacy_first_occurrence(tmp_path, kind):
     path = tmp_path / "messages.sqlite"

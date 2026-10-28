@@ -7,13 +7,16 @@
 | 模块 | 职责 |
 |---|---|
 | `huoxing.types` / `huoxing.forward_types` | 拥有数据的结果、特征和证据类型 |
+| `huoxing.messages` | 消息上下文、图片/转发值类型、统一指纹和检测结果 |
+| `huoxing.repository` | 抽象仓储与原子会话契约 |
+| `huoxing.repository_sqlite` | SQLite 会话及统一身份索引实现 |
 | `huoxing.hashing` | SHA-256 上下文、RGB 规范化前缀、十六进制编码 |
 | `huoxing.vision` / `huoxing.format` | 单处声明并导出 OpenCV / fmt 的原始实体，保持第三方 ABI |
 | `huoxing.features` | 灰度缩放与 SIFT 提取 |
 | `huoxing.matching` | 双向近邻、RANSAC、公共区域像素验证 |
 | `huoxing.sqlite` | 连接、语句、事务的 RAII 所有权 |
 | `huoxing.database` / `huoxing.forward_database` | 图片或整包的 SQL 与持久化 |
-| `huoxing.detector` / `huoxing.forward` | 检测流程与证据决策，不含 SQL |
+| `huoxing.detector` / `huoxing.forward` | 统一检测接口、流程编排及兼容入口，不含 SQL |
 | `huoxing` | 面向调用方的公共模块入口 |
 
 匹配流程按阶段拆分；各阶段的参数与阈值沿用上一版本。不要在风格修改中调整算法规则。

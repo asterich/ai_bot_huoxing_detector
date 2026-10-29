@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "id": "org.asterich.huoxing",
+  "version": "0.2.0",
+  "name": "火星梗图检测",
+  "description": "C++26 图片改图查重，只检查消息最顶层",
+  "author": {"name": "asterich"},
+  "urls": {"repository": "https://github.com/asterich/ai_bot_huoxing_detector"},
+  "sdk": {"min_version": "2.0.0", "max_version": "2.99.99"},
+  "capabilities": ["send.text"],
+  "i18n": {"default_locale": "zh-CN"}
+}

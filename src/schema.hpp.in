@@ -1,0 +1,2 @@
+#pragma once
+inline constexpr const char* schema_sql = R"HXSQL(@HUOXING_SCHEMA@)HXSQL";

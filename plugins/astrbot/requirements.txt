@@ -1,0 +1,2 @@
+# 先在 AstrBot 使用的同一 Python 环境安装本仓库构建的 huoxing_detector wheel。
+# 原生扩展依赖 Pixi 中的 GCC runtime / OpenCV，推荐在 Pixi 环境运行 AstrBot。

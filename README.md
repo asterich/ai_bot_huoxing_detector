@@ -1,17 +1,19 @@
 # 火星梗图检测器
 
-QQ群梗图改图查重。核心使用 **C++26 named modules**，支持 **GCC ≥16.1 / Clang ≥21**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、原生库和 Python 环境。锁定环境以 GCC 16.1 和 Clang 21 为验证基线。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
+QQ群梗图改图查重。核心使用 **C++26 named modules / import std**，支持 **GCC ≥16.1 / Clang ≥21**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、fmt、原生库和 Python 环境。锁定环境以 GCC 16.1 和 Clang 21 为验证基线。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
 
 目标平台是 Linux x86_64；Windows 使用 WSL2。原生 Windows/MSVC 不在当前构建目标内。
 
 ## 开始使用
+
+准备在小服务器上运行 QQ 机器人时，先看 [AstrBot + SnowLuma 完整部署流程](docs/DEPLOY_ASTRBOT.md)，包含服务器选型、Pixi 安装、插件接入、OneBot 配置、后台运行与备份排障。
 
 在安装 [Pixi](https://pixi.sh/) 的 Linux/WSL 终端中：
 
 ```sh
 git clone https://github.com/asterich/ai_bot_huoxing_detector.git
 cd ai_bot_huoxing_detector
-git switch codex/cpp26-core
+git switch codex/forward-top-level
 pixi install --locked
 pixi run test
 pixi run install
@@ -23,7 +25,7 @@ pixi run huoxing cropped.png --scope qq:bot:group --message-id 101
 
 `pixi run test` 包含 `clang-format --dry-run --Werror` 检查、GCC 和 Clang 两套独立构建及 C++/Python 测试。`pixi run test-gcc`、`pixi run test-clang` 可分别验证；`pixi run format` 自动格式化。`pixi run install` 把 GCC 构建安装为本环境可导入的包。测试直接加载各构建目录产出的扩展，避免误测另一个编译器安装的版本。
 
-无需自备图片的演示：安装后运行 `pixi run python examples/demo.py`，会生成测试图、登记原图并检测裁剪版，输出匹配证据；演示数据库随后自动清理。
+无需自备图片的演示：安装后运行 `pixi run python examples/demo.py`，会生成测试图、登记原图并检测裁剪版，再演示同一顶层转发资源的重复检测，输出统一哈希和匹配证据；演示数据库随后自动清理。
 
 ```python
 from huoxing import Detector, result_dict
@@ -34,6 +36,8 @@ with open("meme.png", "rb") as f:
         scope="qq:机器人账号:群号", message_id="消息ID", sender_id="发送者QQ", part=0)
 print(result_dict(result))
 ```
+
+图片和整包转发也可使用统一的 `detector.detect(Message(...))`。`IDetector`、`Repository` 和 `RepositorySession` 定义接口；`Detector` 编排检测，`SqliteRepository` 实现存储。每条消息返回带依据的统一 SHA-256 指纹；整包转发只检查最顶层，不展开内部消息。见 [架构、统一哈希与调用示例](docs/ARCHITECTURE.md)。
 
 异步机器人应通过 `huoxing.worker.ImageWorker` 调用，避免阻塞事件循环。C++ binding 在复制输入后释放 GIL；Worker 只允许一个在途任务，忙时跳过，不建立无限队列。宿主取消等待后，已开始的后台任务仍可能登记图片，但不会因此启动更多后台任务。
 
@@ -55,9 +59,16 @@ print(result_dict(result))
 ```text
 src/modules/huoxing.cppm  C++ 公共入口：import huoxing;
 src/modules/types.cppm    结果、特征及证据值类型
+src/modules/messages.cppm 两种消息、上下文、统一指纹和检测结果
+src/modules/repository.cppm 抽象仓储及事务会话接口
+src/modules/repository_sqlite.cppm SQLite 实现与统一哈希索引
 src/modules/features.cppm RGB 哈希、灰度缩放、SIFT 提取
+src/modules/hashing.cppm  公共 SHA-256 和 fmt 编码
+src/modules/vision.cppm   OpenCV 唯一声明与类型常量导出边界
+src/modules/format.cppm   fmt 唯一声明与格式化输出边界
 src/modules/matching.cppm 双向特征匹配、RANSAC、像素验证
-src/modules/database.cppm SQLite RAII、Repository、查询及持久化
+src/modules/sqlite.cppm   SQLite RAII、借用视图的绑定与复制
+src/modules/database.cppm 图片 Repository、查询及持久化
 src/modules/detector.cppm 检测流程编排，不含 SQL
 src/binding.cpp          pybind11
 schema.sql               唯一 schema 来源，构建时嵌入核心
@@ -70,13 +81,13 @@ pixi.toml / pixi.lock     环境声明与锁文件
 .clang-format            C++ 统一格式约定
 ```
 
-`images` 保存群作用域、完整 RGB 哈希、灰度缩略图、局部点、描述子；`occurrences` 保存消息及分段序号、发送者、UTC 登记时间、匹配证据。`meta` 标识数据与特征格式。按群索引、唯一约束、外键及 `BEGIN IMMEDIATE` 保证先查再写的原子性；WAL 支持并发读取。每次调用使用独立数据库连接。
+`images` 保存群作用域、完整 RGB 哈希、灰度缩略图、局部点、描述子；`occurrences` 保存图片消息及匹配证据；`forward_occurrences` 保存整包顶层引用和可见卡片摘要；`message_hashes` 提供统一身份索引。`meta` 标识数据与特征格式。按群索引、唯一约束、外键及 `BEGIN IMMEDIATE` 保证先查再写的原子性；WAL 支持并发读取。每次调用使用独立数据库连接，同次检测的登记和索引共用一个事务。
 
 不保存原始彩色图片或完整聊天内容，但保存灰度缩略图、视觉特征和消息标识。管理员在宿主鉴权后可调用 `delete_scope(scope)` 删除本群图片及关联消息记录。C++/Python 原型数据库格式不兼容，不要混用原型数据库。
 
 ## 接入、测试与局限
 
-见 [AstrBot/MaiBot 接入流程](docs/INTEGRATION.md)。QQ 连接由宿主适配器负责。插件不递归访问聊天记录、引用消息或转发节点。
+见 [AstrBot/MaiBot 接入流程](docs/INTEGRATION.md)；从零搭建服务器可直接按 [AstrBot 部署文档](docs/DEPLOY_ASTRBOT.md) 操作。QQ 连接由宿主适配器负责。插件不递归访问聊天记录、引用消息或转发节点。
 
 输入限制：8 MiB、1600 万像素、宽高至少 16。拒绝动图，不默默仅取第一帧。低纹理、纯文字图、严重裁剪、强遮挡、镜像、重绘可能漏报；相同模板的小幅文字修改可能仍被当作视觉重复。本项目不判断语义是否相同。
 
@@ -86,4 +97,6 @@ pixi.toml / pixi.lock     环境声明与锁文件
 
 工具参考：[GCC C++26 支持](https://gcc.gnu.org/projects/cxx-status.html)、[pybind11 构建](https://pybind11.readthedocs.io/en/stable/cmake/)。GCC 对 C++26 的支持仍包含实验性部分；本项目明确开启 `-std=c++26`，未依赖反射等额外实验开关。
 
-CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。第三方 C 库、OpenCV、标准库头文件位于 global module fragment；项目接口通过 named modules 导出。不使用 `import std`，避免依赖不同标准库的标准模块打包差异。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
+CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。项目源码通过 `import std;` 使用标准库；CMake 从工具链的 libstdc++ 标准模块源码生成 BMI。第三方 C 库、OpenCV、fmt 等头文件位于 global module fragment。Pixi 固定 CMake 4.4.4 及其标准模块实验开关，详细约定见 [STYLE.md](docs/STYLE.md)。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
+
+整包聊天记录顶层查重的状态和接入字段见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 是统一检测器的兼容入口，`huoxing.forward_database` 封装转发数据 SQL；均不获取或展开包内消息。

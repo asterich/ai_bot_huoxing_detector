@@ -14,6 +14,8 @@ SnowLuma 当前采用源码可见的非商业许可，明确不属于 OSI 开源
 
 ### AstrBot
 
+从零搭建小服务器，请先阅读 [AstrBot + SnowLuma 部署文档](DEPLOY_ASTRBOT.md)，其中提供可执行命令、目录约定、端口配置、验收和 systemd 后台运行流程。以下为已有宿主的接入摘要。
+
 1. 在 AstrBot 的同一个 Python 环境中安装本仓库：`python -m pip install --no-build-isolation --no-deps /绝对路径/本仓库`。推荐在 Pixi 环境内启动宿主。
 2. 复制 `plugins/astrbot` 至 `AstrBot/data/plugins/astrbot_plugin_huoxing`。
 3. 配置 OneBot v11 群消息接收；重载插件。

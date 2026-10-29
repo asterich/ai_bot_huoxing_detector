@@ -6,6 +6,8 @@ QQ群梗图改图查重。核心使用 **C++26 named modules / import std**，�
 
 ## 开始使用
 
+准备在小服务器上运行 QQ 机器人时，先看 [AstrBot + SnowLuma 完整部署流程](docs/DEPLOY_ASTRBOT.md)，包含服务器选型、Pixi 安装、插件接入、OneBot 配置、后台运行与备份排障。
+
 在安装 [Pixi](https://pixi.sh/) 的 Linux/WSL 终端中：
 
 ```sh
@@ -85,7 +87,7 @@ pixi.toml / pixi.lock     环境声明与锁文件
 
 ## 接入、测试与局限
 
-见 [AstrBot/MaiBot 接入流程](docs/INTEGRATION.md)。QQ 连接由宿主适配器负责。插件不递归访问聊天记录、引用消息或转发节点。
+见 [AstrBot/MaiBot 接入流程](docs/INTEGRATION.md)；从零搭建服务器可直接按 [AstrBot 部署文档](docs/DEPLOY_ASTRBOT.md) 操作。QQ 连接由宿主适配器负责。插件不递归访问聊天记录、引用消息或转发节点。
 
 输入限制：8 MiB、1600 万像素、宽高至少 16。拒绝动图，不默默仅取第一帧。低纹理、纯文字图、严重裁剪、强遮挡、镜像、重绘可能漏报；相同模板的小幅文字修改可能仍被当作视觉重复。本项目不判断语义是否相同。
 

@@ -56,3 +56,21 @@ def test_clean_scope(tmp_path):
     check(d, [card("abc")], "2")
     d.delete_scope("g")
     assert check(d, [card("abc")])[0].status == "new_resource"
+
+
+def test_xml_forward_matches_json_resource(tmp_path):
+    d = Detector(tmp_path / "db.sqlite")
+    xml = {"type": "xml", "data": {"data": '<msg serviceID="35" m_resid="abc"><item /></msg>'}}
+    assert check(d, [xml])[0].status == "new_resource"
+    result = check(d, [card("abc")], "2")[0]
+    assert result.status == "same_resource" and result.first_message_id == "1"
+    assert check(d, [xml], "1")[0].replayed
+    assert check(d, [xml], group="other")[0].status == "new_resource"
+
+
+def test_xml_requires_forward_service_and_valid_payload():
+    for text in ('<msg serviceID="1" m_resid="abc"/>', '<msg',
+                 '<!DOCTYPE msg [<!ENTITY x "abc">]><msg serviceID="35" m_resid="&x;"/>',
+                 'x' * 65537):
+        assert envelope({"type": "xml", "data": {"data": text}}) is None
+    assert envelope({"type": "xml", "data": {"data": '<msg serviceID="35"/>'}}).resource_id == ""

@@ -36,10 +36,17 @@ class HuoxingPlugin(Star):
             kind = str(getattr(getattr(segment, "type", None), "value", "")).lower()
             if kind == "forward":
                 outer.append({"type": "forward", "data": {"id": getattr(segment, "id", "")}})
-            elif kind == "json":
-                outer.append({"type": "json", "data": {"data": getattr(segment, "data", None)}})
+            elif kind in ("json", "xml"):
+                outer.append({"type": kind, "data": {"data": getattr(segment, "data", None)}})
             else:
                 outer.append(None)  # 不调用 Node/Nodes.to_dict()，它可能展开内部媒体。
+        # AstrBot may discard unsupported XML components; OneBot retains them here.
+        if getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp":
+            raw = getattr(event.message_obj, "raw_message", None)
+            if callable(getattr(raw, "get", None)):
+                segments = raw.get("message")
+                if isinstance(segments, list):
+                    outer = segments[:32]
         try:
             forward_results = await self.worker.check_forward(outer,
                 scope=f"qq:{event.get_self_id()}:{group}", message_id=msg_id)

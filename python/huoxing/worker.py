@@ -15,6 +15,10 @@ class ImageWorker:
         from .forward import check_top_level
         return await self._run(partial(check_top_level, self.detector, segments, **metadata))
 
+    async def check_cards(self, segments, **metadata):
+        from .cards import check_cards
+        return await self._run(partial(check_cards, self.detector, segments, **metadata))
+
     async def _run(self, operation):
         if self._task is not None and not self._task.done():
             return None

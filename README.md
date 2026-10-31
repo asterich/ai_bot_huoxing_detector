@@ -100,3 +100,5 @@ pixi.toml / pixi.lock     环境声明与锁文件
 CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。项目源码通过 `import std;` 使用标准库；CMake 从工具链的 libstdc++ 标准模块源码生成 BMI。第三方 C 库、OpenCV、fmt 等头文件位于 global module fragment。Pixi 固定 CMake 4.4.4 及其标准模块实验开关，详细约定见 [STYLE.md](docs/STYLE.md)。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
 
 整包聊天记录顶层查重的状态和接入字段见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 是统一检测器的兼容入口，`huoxing.forward_database` 封装转发数据 SQL；均不获取或展开包内消息。
+
+B 站、微信公众号及其他分享卡片的目标链接查重见 [CARDS.md](docs/CARDS.md)。

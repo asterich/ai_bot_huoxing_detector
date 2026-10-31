@@ -10,6 +10,7 @@ from astrbot.api.star import Context, Star, StarTools
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
 from huoxing.forward import format_forward_hit
+from huoxing.cards import format_card_hit
 
 
 def read_image(path):
@@ -36,10 +37,17 @@ class HuoxingPlugin(Star):
             kind = str(getattr(getattr(segment, "type", None), "value", "")).lower()
             if kind == "forward":
                 outer.append({"type": "forward", "data": {"id": getattr(segment, "id", "")}})
-            elif kind == "json":
-                outer.append({"type": "json", "data": {"data": getattr(segment, "data", None)}})
+            elif kind in ("json", "xml"):
+                outer.append({"type": kind, "data": {"data": getattr(segment, "data", None)}})
             else:
                 outer.append(None)  # 不调用 Node/Nodes.to_dict()，它可能展开内部媒体。
+        # AstrBot may discard unsupported XML components; OneBot retains them here.
+        if getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp":
+            raw = getattr(event.message_obj, "raw_message", None)
+            if callable(getattr(raw, "get", None)):
+                segments = raw.get("message")
+                if isinstance(segments, list):
+                    outer = segments[:32]
         try:
             forward_results = await self.worker.check_forward(outer,
                 scope=f"qq:{event.get_self_id()}:{group}", message_id=msg_id)
@@ -50,6 +58,15 @@ class HuoxingPlugin(Star):
                     break
         except (ValueError, OSError, RuntimeError) as exc:
             logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
+        try:
+            card_results = await self.worker.check_cards(outer,
+                scope=f"qq:{event.get_self_id()}:{group}", message_id=msg_id)
+            for result in card_results or []:
+                text = format_card_hit(result)
+                if text and not hits:
+                    hits.append(text)
+        except (ValueError, OSError, RuntimeError) as exc:
+            logger.warning("分享卡片查重跳过：%s", type(exc).__name__)
         # 只遍历最顶层 Image；Node、Nodes、Forward、Reply 内部均不访问。
         for part, segment in enumerate(event.get_messages()[:32]):
             if not isinstance(segment, Image):

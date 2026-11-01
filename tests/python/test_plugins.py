@@ -4,6 +4,7 @@ import base64
 import importlib.util
 import sys
 import types
+import pytest
 from pathlib import Path
 
 from conftest import encode, fixture
@@ -24,7 +25,8 @@ def load(name, file):
     return value
 
 
-def test_astrbot_entrypoint(monkeypatch, tmp_path):
+@pytest.mark.parametrize("mode", ["image", "xml-forward"])
+def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
     class Star:
         def __init__(self, context):
             pass
@@ -52,12 +54,16 @@ def test_astrbot_entrypoint(monkeypatch, tmp_path):
         get_group_id = lambda self: "group"
         get_self_id = lambda self: "bot"
         get_sender_id = lambda self: "user"
-        get_messages = lambda self: [Node(), Image()]
+        get_messages = lambda self: [Node(), Image()] if mode == "image" else []
+        get_platform_name = lambda self: "aiocqhttp"
         plain_result = lambda self, text: text
     async def exercise():
         event = Event()
+        raw = {"message": [{"type": "xml", "data": {"data": '<msg serviceID="35" m_resid="abc"/>'}}]}
+        if mode == "xml-forward":
+            event.message_obj = types.SimpleNamespace(message_id="1", raw_message=raw)
         assert [item async for item in plugin.on_message(event)] == []
-        event.message_obj = types.SimpleNamespace(message_id="2")
+        event.message_obj = types.SimpleNamespace(message_id="2", raw_message=raw if mode == "xml-forward" else None)
         assert len([item async for item in plugin.on_message(event)]) == 1
         assert [item async for item in plugin.on_message(event)] == []
         await plugin.terminate()

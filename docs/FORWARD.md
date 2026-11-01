@@ -13,7 +13,7 @@
 
 同一卡片预览可能对应不同聊天记录，绝不能仅凭标题、条数或预览判定整包内容相同。资源 ID 是平台引用标识，不是内容哈希。重新打包/某些转发路径可能产生新 ID；即使内容未变，也可能无法命中。
 
-支持外层 OneBot `forward.data.id` 和 QQ `com.tencent.multimsg` JSON 卡片的 `meta.detail.resid`。两种标识使用不同命名空间，不假设它们等价。JSON 只对白名单中的可见标题、摘要、最多四条预览计算摘要；发送时间、外层消息 ID、uniseq、extra 不参与匹配。XML 卡片、其他适配器字段缺失时跳过，不猜测。
+支持外层 OneBot `forward.data.id` 和 QQ `com.tencent.multimsg` JSON 卡片的 `meta.detail.resid`。两种标识使用不同命名空间，不假设它们等价。JSON 只对白名单中的可见标题、摘要、最多四条预览计算摘要；发送时间、外层消息 ID、uniseq、extra 不参与匹配。同时支持 `serviceID="35"` XML 卡片根元素的 `m_resid`，与 JSON `resid` 使用相同命名空间；无 `m_resid` 时不猜测 `m_fileName`。XML 限制 64 KiB，拒绝 DTD/实体声明。AstrBot 的 OneBot 入口读取原始外层消息数组，避免宿主丢弃不支持的 XML 组件。其他适配器字段缺失时跳过，不猜测。
 
 ## 验证转发后是否变化
 

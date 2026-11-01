@@ -65,6 +65,9 @@ if(HUOXING_PYTHON)
   find_package(pybind11 CONFIG REQUIRED)
   pybind11_add_module(_native src/binding.cpp)
   target_link_libraries(_native PRIVATE huoxing_core)
+  # Wheels target the locked Conda prefix: lib/pythonX.Y/site-packages/huoxing.
+  set_target_properties(_native PROPERTIES INSTALL_RPATH "$ORIGIN/../../.."
+    INSTALL_RPATH_USE_LINK_PATH FALSE)
   install(TARGETS _native LIBRARY DESTINATION huoxing RUNTIME DESTINATION huoxing)
 endif()
 include(CTest)

@@ -66,3 +66,30 @@ def test_xml_json_and_nested_boundaries(tmp_path):
     assert hit.status == "same_resource"
     with sqlite3.connect(tmp_path / "db.sqlite") as c:
         assert c.execute("SELECT COUNT(*) FROM images").fetchone()[0] == 0
+
+
+def test_netease_routes_music_cards_and_different_content():
+    expected = identity("https://music.163.com/#/song?id=123&userid=1")
+    assert expected == ("share:netease-song:v1", "123")
+    assert identity("https://y.music.163.com/m/song?id=123&uct2=tracking") == expected
+    assert identity("https://music.163.com/song?id=123") == expected
+    assert identity("https://music.163.com/#/song?id=124") != expected
+    assert identity("https://music.163.com/#/playlist?id=123") != expected
+    assert identity("https://music.163.com/#/song?id=123&id=124") is None
+    assert identity("https://music.163.com/#/song?userid=123") is None
+    music = {"type": "json", "data": {"data": json.dumps({
+        "app": "com.tencent.structmsg", "meta": {"music": {
+            "jumpUrl": "https://music.163.com/song?id=123", "musicUrl": "https://cdn.example/audio.mp3"}}})}}
+    assert card_identity(music) == expected
+    assert card_identity({"type": "xml", "data": {"data": '<msg serviceID="2" url="https://music.163.com/song?id=123"/>'}}) == expected
+
+
+def test_netease_native_replay_and_scope(tmp_path):
+    detector = Detector(tmp_path / "music.sqlite")
+    one = card("https://music.163.com/#/song?id=123")
+    two = card("https://y.music.163.com/m/song?id=123&userid=2")
+    assert check_cards(detector, [one], scope="g", message_id="1")[0].status == "new_resource"
+    hit = check_cards(detector, [two], scope="g", message_id="2")[0]
+    assert hit.status == "same_resource" and hit.first_message_id == "1"
+    assert check_cards(detector, [two], scope="g", message_id="2")[0].replayed
+    assert check_cards(detector, [two], scope="other", message_id="3")[0].status == "new_resource"

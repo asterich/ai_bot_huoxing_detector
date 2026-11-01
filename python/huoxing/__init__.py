@@ -17,15 +17,40 @@ MAX_PIXELS = 16_000_000
 
 
 def _decode_rgb(data: bytes):
-    if not isinstance(data, bytes) or not data or len(data) > MAX_BYTES:
-        raise ValueError("图片为空或超过 8 MiB")
+    if not isinstance(data, bytes):
+        raise ValueError("图片输入必须为 bytes")
+    if not data:
+        raise ValueError("图片为空：0 bytes")
+    if len(data) > MAX_BYTES:
+        raise ValueError(f"图片文件过大：{len(data)} bytes，上限 {MAX_BYTES} bytes (8 MiB)")
     with warnings.catch_warnings():
         warnings.simplefilter("error", Image.DecompressionBombWarning)
-        with Image.open(io.BytesIO(data)) as image:
-            if image.width * image.height > MAX_PIXELS or min(image.size) < 16:
-                raise ValueError("图片尺寸不在支持范围内")
-            if getattr(image, "n_frames", 1) != 1:
-                raise ValueError("暂不支持动图，不自动只取首帧")
+        try:
+            opened = Image.open(io.BytesIO(data))
+        except (Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
+            raise ValueError(f"图片像素过多：触发 Pillow 解压保护，上限 {MAX_PIXELS} pixels；{exc}") from exc
+        with opened as image:
+            reasons = []
+            pixels = image.width * image.height
+            if pixels > MAX_PIXELS:
+                reasons.append(f"图片像素过多：{image.width}x{image.height}={pixels} pixels，上限 {MAX_PIXELS} pixels")
+            if min(image.size) < 16:
+                reasons.append(f"图片尺寸过小：{image.width}x{image.height}，短边至少 16 pixels")
+            frames = getattr(image, "n_frames", 1)
+            if frames != 1:
+                # These XMP namespaces identify auxiliary HDR data, not animation.
+                hdr = image.format in ("MPO", "JPEG") and any(marker in data for marker in (
+                    b"urn:com:apple:photo:2020:aux:hdrgainmap",
+                    b"http://ns.adobe.com/hdr-gain-map/1.0/",
+                ))
+                if hdr:
+                    reasons.append(f"暂不支持带 HDR 增益图的照片：format={image.format}, frames={frames}，包含辅助图像")
+                elif image.format in ("GIF", "PNG", "WEBP", "AVIF") and getattr(image, "is_animated", False):
+                    reasons.append(f"暂不支持动图：format={image.format}, frames={frames}，不自动只取首帧")
+                else:
+                    reasons.append(f"暂不支持多图像文件：format={image.format}, frames={frames}，不自动只取首幅")
+            if reasons:
+                raise ValueError("；".join(reasons))
             image = ImageOps.exif_transpose(image).convert("RGBA")
             background = Image.new("RGBA", image.size, "white")
             background.alpha_composite(image)

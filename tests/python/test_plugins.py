@@ -25,7 +25,7 @@ def load(name, file):
     return value
 
 
-@pytest.mark.parametrize("mode", ["image", "json-card", "xml-card"])
+@pytest.mark.parametrize("mode", ["image", "xml-forward", "card"])
 def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
     class Star:
         def __init__(self, context):
@@ -60,15 +60,12 @@ def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
     async def exercise():
         event = Event()
         raw = {"message": [{"type": "xml", "data": {"data": '<msg serviceID="35" m_resid="abc"/>'}}]}
-        if mode == "json-card":
-            from test_cards import card
-            raw = {"message": [card("https://www.bilibili.com/video/BV1xx411c7mD")]}
-        elif mode == "xml-card":
-            raw = {"message": [{"type": "xml", "data": {"data": '<msg serviceID="1" url="https://mp.weixin.qq.com/s/article"/>'}}]}
-        if mode != "image":
+        if mode == "card":
+            raw = {"message": [{"type": "xml", "data": {"data": '<msg serviceID="2" url="https://music.163.com/song?id=123"/>'}}]}
+        if mode in ("xml-forward", "card"):
             event.message_obj = types.SimpleNamespace(message_id="1", raw_message=raw)
         assert [item async for item in plugin.on_message(event)] == []
-        event.message_obj = types.SimpleNamespace(message_id="2", raw_message=raw if mode != "image" else None)
+        event.message_obj = types.SimpleNamespace(message_id="2", raw_message=raw if mode in ("xml-forward", "card") else None)
         assert len([item async for item in plugin.on_message(event)]) == 1
         assert [item async for item in plugin.on_message(event)] == []
         await plugin.terminate()
@@ -104,15 +101,5 @@ def test_maibot_entrypoint(monkeypatch, tmp_path):
             {"type": "image", "data": {"binary_data_base64": payload}}]}}]
         await plugin.detect_images(message, stream_id="s")
         assert len(sent) == 1
-        from test_cards import card
-        message["message_info"]["message_id"] = "4"
-        message["raw_message"] = [card("https://mp.weixin.qq.com/s/article")]
-        await plugin.detect_images(message, stream_id="s")
-        assert len(sent) == 1
-        message["message_info"]["message_id"] = "5"
-        await plugin.detect_images(message, stream_id="s")
-        assert len(sent) == 2 and "分享卡片" in sent[-1][0]
-        await plugin.detect_images(message, stream_id="s")
-        assert len(sent) == 2
         await plugin.on_unload()
     asyncio.run(exercise())

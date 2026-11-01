@@ -1,5 +1,6 @@
 """只看最外层 forward / com.tencent.multimsg 卡片，不访问节点或下载整包。"""
 import json
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 
@@ -30,6 +31,19 @@ def envelope(segment) -> Envelope | None:
     if kind == "forward" and isinstance(data, dict):
         # 不访问 data.content / messages / nodes。
         return Envelope("onebot11:forward-id", _resource_id(data.get("id")))
+    if kind == "xml":
+        payload = data.get("data") if isinstance(data, dict) else data
+        if not isinstance(payload, str) or len(payload) > 65536:
+            return None
+        if "<!DOCTYPE" in payload.upper() or "<!ENTITY" in payload.upper():
+            return None
+        try:
+            root = ET.fromstring(payload)
+        except (ET.ParseError, ValueError, RecursionError):
+            return None
+        if root.tag != "msg" or root.get("serviceID") != "35":
+            return None
+        return Envelope("qq:multimsg-resid", _resource_id(root.get("m_resid")))
     if kind != "json":
         return None
     payload = data.get("data") if isinstance(data, dict) else data

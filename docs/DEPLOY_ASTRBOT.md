@@ -1,5 +1,7 @@
 # 小服务器部署：AstrBot + SnowLuma + 火星检测
 
+已有服务器更新插件请使用 [CI 二进制发布包安装与回退](BINARY_DEPLOY.md)。不要在运行 AstrBot 的小服务器上执行下文的源码编译、`pixi run install` 或回归测试；源码构建步骤仅用于独立构建机。
+
 本流程在一台服务器上运行 QQ 连接端、AstrBot 和查重插件。AstrBot 使用本项目的 Pixi 环境，SnowLuma 使用 Docker，通过 OneBot v11 反向 WebSocket 连接。
 
 整理日期：2026-10-29。原生核心的构建、测试和安装记录见 [VALIDATION.md](VALIDATION.md)；真实 QQ + SnowLuma + AstrBot 的整条链路仍需按本文验收。

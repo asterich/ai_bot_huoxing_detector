@@ -15,3 +15,5 @@ AstrBot 与 MaiBot 在群内识别最外层 QQ `com.tencent.structmsg` 的 `meta
 XML 最多 64 KiB，禁止 DTD/实体声明；URL 最多 4096 字符，拒绝非 HTTP(S)、带认证信息或显式端口的 URL。未知卡片格式跳过。AstrBot 的 OneBot 入口读取保留的原始外层数组，避免 XML 在宿主转换中被丢弃。
 
 验证使用生成的卡片样例、真实 SQLite/原生扩展和宿主事件替身；未在真实 QQ 群发送卡片进行端到端验证。
+
+网易云音乐支持 music.163.com / m.music.163.com / y.music.163.com 的 song、album、playlist ID，包含桌面 #/song?id= 和移动 /m/song?id= 路径。忽略分享跟踪参数，歌曲、专辑和歌单各用独立命名空间。QQ 音乐 JSON 卡片读取 meta.music.jumpUrl；音乐 XML 卡片读取 serviceID=2 根 URL。无明确目标 ID 的网易云地址不匹配，短链不联网展开。

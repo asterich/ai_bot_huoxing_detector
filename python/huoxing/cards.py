@@ -32,6 +32,15 @@ def identity(url):
         if parsed.path in ("/s", "/s/") and all(len(query.get(k, [])) == 1 and query[k][0] for k in keys):
             return "share:wechat-article:v1", urlencode([(k, query[k][0]) for k in keys])
         return None
+    if host in ("music.163.com", "m.music.163.com", "y.music.163.com"):
+        # NetEase's desktop site uses hash routes; preserve their semantic query.
+        route = urlsplit(parsed.fragment) if parsed.fragment.startswith("/") else parsed
+        params = parse_qs(route.query, keep_blank_values=True)
+        match = re.fullmatch(r"/(?:m/)?(song|album|playlist)/?", route.path)
+        ids = params.get("id", [])
+        if match and len(ids) == 1 and re.fullmatch(r"[0-9]{1,20}", ids[0]):
+            return "share:netease-" + match[1] + ":v1", str(int(ids[0]))
+        return None
     # Unknown providers and short links require the same URL. Keep all query data
     # because it may identify content; only fragments and host case differ.
     normalized = urlunsplit((parsed.scheme, host, parsed.path or "/", parsed.query, ""))
@@ -61,8 +70,11 @@ def card_identity(segment):
             return None
         if app == "com.tencent.structmsg":
             news = meta.get("news")
+            music = meta.get("music")
             if isinstance(news, dict):
                 urls = [news.get("jumpUrl")]
+            elif isinstance(music, dict):
+                urls = [music.get("jumpUrl")]
         elif app == "com.tencent.miniapp_01":
             detail = meta.get("detail_1")
             if isinstance(detail, dict):
@@ -76,7 +88,7 @@ def card_identity(segment):
             root = ET.fromstring(payload)
         except (ET.ParseError, ValueError, RecursionError):
             return None
-        if root.tag == "msg" and root.get("serviceID") == "1":
+        if root.tag == "msg" and root.get("serviceID") in ("1", "2"):
             urls = [root.get("url")]
     for url in urls:
         result = identity(url)

@@ -1,5 +1,8 @@
 """CI-only: build a wheel and an immutable, checksummed AstrBot deployment bundle."""
 import hashlib
+import base64
+import csv
+import io
 import importlib.metadata
 import json
 import os
@@ -25,13 +28,33 @@ wheel, = dist.glob("*.whl")
 if "-cp312-cp312-linux_x86_64.whl" not in wheel.name:
     raise RuntimeError(f"Unexpected ABI/platform: {wheel.name}")
 with zipfile.ZipFile(wheel) as archive:
+    members = [(info, archive.read(info.filename)) for info in archive.infolist()]
     native, = [name for name in archive.namelist() if name.startswith("huoxing/_native") and name.endswith(".so")]
     binary = dist / "wheel-native.so"
     binary.write_bytes(archive.read(native))
+# Conda linker flags can inject their own absolute RPATH despite CMake's setting.
+subprocess.run(["patchelf", "--set-rpath", "$ORIGIN/../../..", str(binary)], check=True)
 dynamic = subprocess.check_output(["readelf", "-d", str(binary)], text=True)
 rpaths = [line for line in dynamic.splitlines() if "RPATH" in line or "RUNPATH" in line]
 if not rpaths or any("[$ORIGIN/../../..]" not in line for line in rpaths):
     raise RuntimeError(f"Wheel must use only a relative locked-prefix RPATH: {rpaths}")
+record, = [info.filename for info, _ in members if info.filename.endswith(".dist-info/RECORD")]
+rows = []
+repaired = dist / "repaired.whl"
+with zipfile.ZipFile(repaired, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+    for info, content in members:
+        if info.filename == record:
+            continue
+        if info.filename == native:
+            content = binary.read_bytes()
+        archive.writestr(info, content)
+        digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+        rows.append([info.filename, "sha256=" + digest, str(len(content))])
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerows(rows + [[record, "", ""]])
+    archive.writestr(record, output.getvalue())
+os.replace(repaired, wheel)
 binary.unlink()
 
 name = f"huoxing-linux-x86_64-cp312-{commit[:12]}"

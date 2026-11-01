@@ -54,6 +54,10 @@ jobs:
       - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94
         with:
           locked: true
+      - name: Install wheel relocation utility
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y patchelf
       - name: Build wheel and deployment bundle
         run: pixi run python tools/build_release.py
       - name: Test installed wheel and deployment in a relocated environment

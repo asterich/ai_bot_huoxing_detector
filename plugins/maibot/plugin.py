@@ -8,6 +8,7 @@ from maibot_sdk.types import HookMode
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
 from huoxing.forward import format_forward_hit
+from huoxing.cards import format_card_hit
 from huoxing.classification import is_regular_image
 
 
@@ -51,6 +52,20 @@ class HuoxingPlugin(MaiBotPlugin):
                 return
         except (ValueError, OSError, RuntimeError) as exc:
             self.ctx.logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
+        try:
+            card_results = await self.worker.check_cards(raw,
+                scope=f"{platform}:{group}", message_id=str(msg_id))
+            for result in card_results or []:
+                text = format_card_hit(result)
+                if text:
+                    stream_id = kwargs.get("stream_id") or info.get("stream_id")
+                    if stream_id:
+                        await self.ctx.send.text(text, str(stream_id))
+                    else:
+                        self.ctx.logger.info("分享卡片查重命中：%s", result.first_message_id)
+                    return
+        except (ValueError, OSError, RuntimeError) as exc:
+            self.ctx.logger.warning("分享卡片查重跳过：%s", type(exc).__name__)
         for part, segment in enumerate(raw[:32]):
             if not is_regular_image(segment):
                 continue

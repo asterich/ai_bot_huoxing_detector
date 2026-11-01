@@ -158,7 +158,7 @@ def test_maibot_stickers_never_reach_worker(monkeypatch, tmp_path):
         raise AssertionError("Sticker reached image worker")
     async def no_results(*args, **kwargs):
         return []
-    plugin.worker = types.SimpleNamespace(check=unexpected, check_forward=no_results)
+    plugin.worker = types.SimpleNamespace(check=unexpected, check_forward=no_results, check_cards=no_results)
     plugin.ctx = types.SimpleNamespace(logger=types.SimpleNamespace(warning=unexpected))
     async def exercise():
         for kind, data in [("emoji", {}), ("mface", {}), ("face", {}),

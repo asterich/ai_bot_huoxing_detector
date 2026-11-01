@@ -10,6 +10,7 @@ from astrbot.api.star import Context, Star, StarTools
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
 from huoxing.forward import format_forward_hit
+from huoxing.cards import format_card_hit
 from huoxing.classification import is_regular_image
 
 
@@ -61,6 +62,15 @@ class HuoxingPlugin(Star):
                     break
         except (ValueError, OSError, RuntimeError) as exc:
             logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
+        try:
+            card_results = await self.worker.check_cards(outer,
+                scope=f"qq:{event.get_self_id()}:{group}", message_id=msg_id)
+            for result in card_results or []:
+                text = format_card_hit(result)
+                if text and not hits:
+                    hits.append(text)
+        except (ValueError, OSError, RuntimeError) as exc:
+            logger.warning("分享卡片查重跳过：%s", type(exc).__name__)
         # Classify raw OneBot segments before constructing Image: AstrBot drops sub_type.
         raw_images = None
         if getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp":

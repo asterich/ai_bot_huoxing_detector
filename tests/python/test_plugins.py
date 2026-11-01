@@ -25,7 +25,7 @@ def load(name, file):
     return value
 
 
-@pytest.mark.parametrize("mode", ["image", "xml-forward"])
+@pytest.mark.parametrize("mode", ["image", "xml-forward", "card"])
 def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
     class Star:
         def __init__(self, context):
@@ -60,10 +60,12 @@ def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
     async def exercise():
         event = Event()
         raw = {"message": [{"type": "xml", "data": {"data": '<msg serviceID="35" m_resid="abc"/>'}}]}
-        if mode == "xml-forward":
+        if mode == "card":
+            raw = {"message": [{"type": "xml", "data": {"data": '<msg serviceID="2" url="https://music.163.com/song?id=123"/>'}}]}
+        if mode in ("xml-forward", "card"):
             event.message_obj = types.SimpleNamespace(message_id="1", raw_message=raw)
         assert [item async for item in plugin.on_message(event)] == []
-        event.message_obj = types.SimpleNamespace(message_id="2", raw_message=raw if mode == "xml-forward" else None)
+        event.message_obj = types.SimpleNamespace(message_id="2", raw_message=raw if mode in ("xml-forward", "card") else None)
         assert len([item async for item in plugin.on_message(event)]) == 1
         assert [item async for item in plugin.on_message(event)] == []
         await plugin.terminate()

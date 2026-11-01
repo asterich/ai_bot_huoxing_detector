@@ -8,7 +8,7 @@
 
 发布包为 `huoxing-linux-x86_64-cp312-<提交号>.tar.gz`，另有外层 `.sha256`。内部包含 wheel、同提交的 AstrBot 入口、`deploy.py`、`manifest.json` 和 `SHA256SUMS`。manifest 记录提交、wheel 版本、锁文件哈希、Conda 包版本/build、numpy/Pillow 版本和系统要求。
 
-第一版仅支持 Linux x86_64、CPython 3.12、glibc >=2.39 和匹配锁文件的现有 Pixi 环境；额外安装的 AstrBot pip 依赖不自动更改。服务器环境不匹配时在停机前中止，不下载依赖、不重建环境、不回退到源码编译。这个 wheel 不是通用 manylinux 包。原生扩展使用相对 RPATH 查找该 Pixi 前缀中的动态库；CI 的换目录验证防止依赖构建机路径。
+第一版仅支持 Linux x86_64、CPython 3.12、glibc >=2.35 和匹配锁文件的现有 Pixi 环境；正式 wheel 在 Ubuntu 22.04 构建和换目录验证，以匹配现有服务器。额外安装的 AstrBot pip 依赖不自动更改。服务器环境不匹配时在停机前中止，不下载依赖、不重建环境、不回退到源码编译。这个 wheel 不是通用 manylinux 包。原生扩展使用相对 RPATH 查找该 Pixi 前缀中的动态库；CI 的换目录验证防止依赖构建机路径。
 
 构建版本仍沿用项目版本号，部署身份以完整 Git 提交和文件哈希为准。同版本不同提交可以通过指定的本地 wheel 强制重装。插件与库必须使用同一个发布包。
 

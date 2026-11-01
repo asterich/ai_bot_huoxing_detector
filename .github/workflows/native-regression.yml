@@ -45,7 +45,7 @@ jobs:
   package:
     name: Build and verify deployment bundle
     needs: regression
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -91,5 +91,5 @@ jobs:
         run: >-
           gh release create "$GITHUB_REF_NAME" artifacts/*
           --verify-tag --title "$GITHUB_REF_NAME"
-          --notes "Verified CPython 3.12 / Linux x86_64 wheel for the matching locked Pixi environment. Requires glibc 2.39 or newer. See docs/BINARY_DEPLOY.md."
+          --notes "Verified CPython 3.12 / Linux x86_64 wheel for the matching locked Pixi environment. Requires glibc 2.35 or newer. See docs/BINARY_DEPLOY.md."
 

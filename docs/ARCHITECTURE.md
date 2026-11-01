@@ -16,7 +16,7 @@ classDiagram
   ForwardDetector --> IDetector : compatibility facade
 ```
 
-`MessageContext` 保存群作用域、消息 ID、发送者和分段序号。`ImageMessage` 保存 RGB 像素；`ForwardMessage` 仅保存最外层资源命名空间、资源 ID 和可见卡片文本。消息类型没有包内节点字段，核心和插件均不调用 `get_forward_msg`、下载整包或递归读取正文和图片。
+`MessageContext` 保存群作用域、消息 ID、发送者和分段序号。`ImageMessage` 保存 RGB 像素；`ForwardMessage` 仅保存最外层资源命名空间、资源 ID 和可见卡片文本。原生消息类型没有包内节点字段。AstrBot 适配层通过有界 `get_forward_msg` 读取元数据，规范化后以独立命名空间把整包 SHA-256 摘要交给原生资源通道；正文不入库，不下载包内媒体、不逐条查重。MaiBot 和读取失败的情况保留顶层模式。
 
 ## 每条消息都有哈希
 

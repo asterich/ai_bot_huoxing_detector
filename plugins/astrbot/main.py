@@ -11,6 +11,7 @@ from astrbot.api.star import Context, Star, StarTools
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker
 from huoxing.forward import format_forward_hit
+from huoxing.forward_content import ForwardContentReader
 from huoxing.cards import format_card_hit
 from huoxing.classification import is_regular_image
 from huoxing.policy import Settings, Cooldowns, TriggerLimiter, RecentImages
@@ -38,6 +39,7 @@ class HuoxingPlugin(Star):
         self.recent_images = RecentImages(self.settings.same_image_cooldown_seconds)
         self.replies = Cooldowns()
         self._lock = asyncio.Lock()
+        self.forward_reader = ForwardContentReader()
 
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def on_message(self, event: AstrMessageEvent):
@@ -89,12 +91,21 @@ class HuoxingPlugin(Star):
             return
         hit = None
         async with self._lock:
+            fingerprints = {}
+            bot = getattr(event, "bot", None)
+            if getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp" and callable(getattr(bot, "call_action", None)):
+                async def fetch_forward(resource_id):
+                    return await bot.call_action("get_forward_msg", id=resource_id)
+                fingerprints = await self.forward_reader.read(outer, fetch_forward, scope=scope, warn=logger.warning)
             for kind, operation, formatter in (
                 ("forward", self.worker.check_forward, format_forward_hit),
                 ("card", self.worker.check_cards, format_card_hit),
             ):
                 try:
-                    results = await operation(outer, scope=scope, message_id=msg_id)
+                    metadata = {"scope": scope, "message_id": msg_id}
+                    if kind == "forward":
+                        metadata["content_fingerprints"] = fingerprints
+                    results = await operation(outer, **metadata)
                     for result in results or []:
                         if formatter(result):
                             hit = (kind, result)

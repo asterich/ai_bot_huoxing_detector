@@ -68,7 +68,7 @@ def card_identity(segment):
         meta = payload.get("meta")
         if not isinstance(meta, dict):
             return None
-        if app == "com.tencent.structmsg":
+        if app in ("com.tencent.structmsg", "com.tencent.tuwen.lua", "com.tencent.music.lua"):
             news = meta.get("news")
             music = meta.get("music")
             if isinstance(news, dict):

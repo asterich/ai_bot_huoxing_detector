@@ -8,7 +8,7 @@
   "forward_reply_template": {
     "type": "string",
     "description": "合并转发火星提醒文案",
-    "default": "这个聊天记录包的顶层资源 ID 之前出现过，首次消息：{first_message_id}。"
+    "default": "这个聊天记录包之前出现过，首次消息：{first_message_id}。"
   },
   "card_reply_template": {
     "type": "string",

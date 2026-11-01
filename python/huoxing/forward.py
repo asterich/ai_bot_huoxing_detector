@@ -73,7 +73,7 @@ def envelope(segment) -> Envelope | None:
     return Envelope("qq:multimsg-resid", _resource_id(detail.get("resid")), card)
 
 
-def check_top_level(detector, segments, *, scope, message_id):
+def check_top_level(detector, segments, *, scope, message_id, content_fingerprints=None):
     """segments 必须是外层消息数组。忽略 node/嵌套内容，无网络访问。"""
     results = []
     if not isinstance(segments, list):
@@ -82,6 +82,9 @@ def check_top_level(detector, segments, *, scope, message_id):
         item = envelope(segment)
         if item is None:
             continue
+        digest = (content_fingerprints or {}).get(part)
+        if isinstance(digest, str) and len(digest) == 64 and all(c in "0123456789abcdef" for c in digest):
+            item = Envelope("qq:forward-content:v1", digest)
         result = detector.forward_native.ingest(scope, message_id, part,
             item.namespace, item.resource_id, item.visible_card)
         results.append(result)
@@ -90,5 +93,5 @@ def check_top_level(detector, segments, *, scope, message_id):
 
 def format_forward_hit(result):
     if result.status == "same_resource" and not result.replayed:
-        return f"这个聊天记录包的顶层资源 ID 之前出现过，首次消息：{result.first_message_id}。"
+        return f"这个聊天记录包之前出现过，首次消息：{result.first_message_id}。"
     return None

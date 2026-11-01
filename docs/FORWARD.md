@@ -1,24 +1,29 @@
-# 整包聊天记录：只检查顶层
+# 合并转发：整包内容指纹
 
-不调用 `get_forward_msg`，不展开 Node/Nodes，不读取包内正文、图片或嵌套转发。用户明确要求整包作为一个对象，因此本功能只能判断顶层引用及可见卡片是否重复。
+AstrBot 的 OneBot 入口会读取 `get_forward_msg(id=...)` 返回的消息元数据，计算**整个包**的 SHA-256 指纹。不会逐条写入图片/卡片查重库，也不会下载包内图片、语音、视频或文件。整包按一条消息登记，沿用配置中的转发提醒文案，最多提醒一次。
 
-## 结果含义
+真实 QQ/SnowLuma 再次转发同一包时会生成不同外层 ID，所以单纯比较外层 ID 不足以识别相同内容。新指纹包括有序消息、发送者 ID 和规范化消息段；不包含外层资源 ID、消息 ID、时间、昵称、群名。相邻文本段会合并，但正文空白和消息顺序保留；更换作者或改动正文会得到不同指纹。
 
-| 状态 | 依据 | 自动提醒 |
-|---|---|---|
-| `same_resource` | 同群、同命名空间的顶层资源 ID 相同 | 提示同一资源再次出现 |
-| `possible_same_card` | 资源 ID 不同或缺失，但可见卡片摘要相同 | 默认不提醒，仅供诊断 |
-| `new_resource` | 首次见到此资源 ID，且无相同预览 | 不提醒；不能证明内容全新 |
-| `insufficient_evidence` | 没有可比资源 ID | 不提醒；不能判定内容 |
+## 支持内容与保守跳过
 
-同一卡片预览可能对应不同聊天记录，绝不能仅凭标题、条数或预览判定整包内容相同。资源 ID 是平台引用标识，不是内容哈希。重新打包/某些转发路径可能产生新 ID；即使内容未变，也可能无法命中。
+- 支持 OneBot 标准 `message: [node...]` 和 SnowLuma `messages: [...]` 返回形状。
+- 文本、@、QQ 表情和引用保留内容或身份信息；内嵌节点及嵌套转发继续按整包结构计算。
+- 图片/语音/视频使用元数据中的 MD5 或 MD5 文件名；文件还可使用明确 `file_id`。签名下载 URL 不参加媒体身份比较。缺少稳定标识时跳过整个包的内容指纹，不下载媒体，不忽略该消息段。
+- 支持的分享卡片使用既有目标身份规范化。未知 JSON/XML 卡片保留完整载荷信息，宁可漏报，不删除可能有意义的字段。其他未知消息段拒绝整包内容指纹。
+- 这属于元数据内容一致性，不是包内图片的视觉查重。重新编码的图片、无法稳定标识的媒体、未知卡片中的易变字段可能导致漏报。
 
-支持外层 OneBot `forward.data.id` 和 QQ `com.tencent.multimsg` JSON 卡片的 `meta.detail.resid`。两种标识使用不同命名空间，不假设它们等价。JSON 只对白名单中的可见标题、摘要、最多四条预览计算摘要；发送时间、外层消息 ID、uniseq、extra 不参与匹配。同时支持 `serviceID="35"` XML 卡片根元素的 `m_resid`，与 JSON `resid` 使用相同命名空间；无 `m_resid` 时不猜测 `m_fileName`。XML 限制 64 KiB，拒绝 DTD/实体声明。AstrBot 的 OneBot 入口读取原始外层消息数组，避免宿主丢弃不支持的 XML 组件。其他适配器字段缺失时跳过，不猜测。
+## 资源限制
 
-## 验证转发后是否变化
+每个外层消息最多 4 次 `get_forward_msg` 请求；单次 3 秒，总计 6 秒。最多读取 200 条消息、2000 个消息段、3 层嵌套、合计 1 MiB 元数据，并检测循环引用。不对截断或部分读取的内容计算指纹。嵌套包先压缩为子指纹，避免重复引用膨胀。
 
-在测试群发送同一包，分别用 QQ 的再次转发、重新合并打包两种方式发送。只收集外层 `type`、`forward.data.id` 或卡片 `resid` 以及返回状态；不要调用下载整包接口。比较两次 ID：若相同则 `same_resource`，若变化则最多 `possible_same_card`。这需要真实 QQ 和所选适配器版本验证，项目不预先声称资源 ID 一定稳定。
+同一资源的指纹缓存 600 秒，最多 256 项；只缓存摘要，不缓存聊天正文。发送者处于暂停期时不读取整包；下载/读取/检测共用单事件锁，忙时不排队。日志会给出读取失败、超时、超限或不支持的段类型，不打印包内聊天正文。
 
-两类消息现在共用 `Detector.detect(Message(...))` 和带依据的 SHA-256 指纹；旧 `ForwardDetector` 入口保留。见 [统一架构与哈希说明](ARCHITECTURE.md)。哈希存在不代表顶层元数据足以识别内部内容，卡片指纹仍然只是弱证据。
+`get_forward_msg` 不可用、读取失败或超出限制时，回退到原有顶层资源 ID 检测：同 ID 可提醒；不同 ID 或仅相同预览不能保证相同内容，预览相同默认不提醒。MaiBot 示例及没有 OneBot API 客户端的宿主继续使用顶层模式。
 
-参考：[OneBot 消息段](https://github.com/botuniverse/onebot-11/blob/master/message/segment.md)、[公开 API](https://github.com/botuniverse/onebot-11/blob/master/api/public.md)、[NapCat 顶层多转发元素类型](https://github.com/NapNeko/NapCatQQ/blob/main/packages/napcat-core/types/msg.ts)。
+## 数据与升级
+
+内容指纹使用独立的 `qq:forward-content:v1` 命名空间；数据库只保存摘要和最外层消息记录，沿用已有事务、重放保护、群隔离和 `delete_scope` 清理。无需原生库或数据库迁移。成功读取内容时只登记内容指纹，不再为同一个外层分段重复登记资源 ID。
+
+升级前的记录只有顶层资源 ID，无法凭旧记录还原历史整包内容。升级后第一次收到某个包时建立内容基线；之后再次转发即可匹配，即使资源 ID 变化。
+
+参考：[OneBot get_forward_msg API](https://github.com/botuniverse/onebot-11/blob/master/api/public.md#get_forward_msg-获取合并转发消息)。

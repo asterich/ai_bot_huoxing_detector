@@ -93,3 +93,24 @@ def test_netease_native_replay_and_scope(tmp_path):
     assert hit.status == "same_resource" and hit.first_message_id == "1"
     assert check_cards(detector, [two], scope="g", message_id="2")[0].replayed
     assert check_cards(detector, [two], scope="other", message_id="3")[0].status == "new_resource"
+
+
+@pytest.mark.parametrize("app,field,url", [
+    ("com.tencent.tuwen.lua", "news", "https://mp.weixin.qq.com/s/example_article?scene=1&clicktime=100"),
+    ("com.tencent.tuwen.lua", "news", "https://www.bilibili.com/video/BV1xx411c7mD?share_source=qq"),
+    ("com.tencent.music.lua", "music", "https://y.music.163.com/m/song?id=1375765543&app_version=9.6.15"),
+])
+def test_real_qq_lua_share_formats(app, field, url):
+    # Sanitized shapes from the failing live messages: app names differ from
+    # structmsg while destination fields retain the same layout.
+    payload = {"app": app, "bizsrc": "qqconnect.sdkshare", "view": field,
+               "config": {"ctime": 100}, "meta": {field: {"jumpUrl": url, "title": "first"}}}
+    segment = {"type": "json", "data": {"data": json.dumps(payload)}}
+    assert card_identity(segment) == identity(url)
+    payload["config"]["ctime"] = 200
+    payload["meta"][field]["title"] = "changed"
+    segment["data"]["data"] = json.dumps(payload)
+    assert card_identity(segment) == identity(url)
+    payload["app"] = "unknown.app"
+    segment["data"]["data"] = json.dumps(payload)
+    assert card_identity(segment) is None

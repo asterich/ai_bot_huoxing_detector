@@ -7,7 +7,7 @@ from string import Formatter
 
 
 IMAGE_TEXT = "这张图之前出现过：消息 {first_message_id}，首次记录 {first_seen}。依据：{method}。"
-FORWARD_TEXT = "这个聊天记录包的顶层资源 ID 之前出现过，首次消息：{first_message_id}。"
+FORWARD_TEXT = "这个聊天记录包之前出现过，首次消息：{first_message_id}。"
 CARD_TEXT = "这张分享卡片的目标链接之前出现过，首次消息：{first_message_id}。"
 
 

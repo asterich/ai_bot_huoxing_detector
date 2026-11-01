@@ -1,0 +1,38 @@
+name: Native regression
+
+on:
+  pull_request:
+  push:
+    branches:
+      - codex/image-skip-reasons-and-sticker-filter
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-regression-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: ${{ matrix.compiler }} native and Python tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install locked Pixi environment
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94
+        with:
+          locked: true
+      - name: Check native formatting
+        if: matrix.compiler == 'gcc'
+        run: pixi run format-check
+      - name: Build and run native and Python regression tests
+        run: pixi run test-${{ matrix.compiler }}

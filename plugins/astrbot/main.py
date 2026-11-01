@@ -10,9 +10,13 @@ from astrbot.api.star import Context, Star, StarTools
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
 from huoxing.forward import format_forward_hit
+from huoxing.classification import is_regular_image
 
 
 def read_image(path):
+    size = Path(path).stat().st_size
+    if size > MAX_BYTES:
+        raise ValueError(f"图片文件过大：{size} bytes，上限 {MAX_BYTES} bytes (8 MiB)")
     with Path(path).open("rb") as stream:
         return stream.read(MAX_BYTES + 1)
 
@@ -50,13 +54,31 @@ class HuoxingPlugin(Star):
                     break
         except (ValueError, OSError, RuntimeError) as exc:
             logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
-        # 只遍历最顶层 Image；Node、Nodes、Forward、Reply 内部均不访问。
-        for part, segment in enumerate(event.get_messages()[:32]):
-            if not isinstance(segment, Image):
+        # Classify raw OneBot segments before constructing Image: AstrBot drops sub_type.
+        raw_images = None
+        if getattr(event, "get_platform_name", lambda: "")() == "aiocqhttp":
+            raw = getattr(event.message_obj, "raw_message", None)
+            if callable(getattr(raw, "get", None)):
+                segments = raw.get("message")
+                if isinstance(segments, list):
+                    raw_images = segments[:32]
+        candidates = enumerate(raw_images if raw_images is not None else event.get_messages()[:32])
+        for part, segment in candidates:
+            if raw_images is not None:
+                if not is_regular_image(segment):
+                    continue
+            elif not isinstance(segment, Image) or not is_regular_image({
+                "type": "image", "data": {"file": getattr(segment, "file", ""),
+                    "sub_type": getattr(segment, "sub_type", None),
+                    "subType": getattr(segment, "subType", None)}}):
                 continue
             if len(hits) >= 1:
                 break
             try:
+                if raw_images is not None:
+                    media = segment["data"]
+                    segment = Image(file=media.get("file") or media.get("url") or "",
+                                    url=media.get("url") or "")
                 path = await asyncio.wait_for(segment.convert_to_file_path(), timeout=8)
                 data = await asyncio.to_thread(read_image, path)
                 result = await self.worker.check(data,
@@ -65,7 +87,9 @@ class HuoxingPlugin(Star):
                 if result and result.duplicate and not result.replayed:
                     hits.append(format_hit(result))
             except (ValueError, OSError, RuntimeError, asyncio.TimeoutError) as exc:
-                logger.warning("火星检测跳过图片：%s", type(exc).__name__)
+                reason = str(exc) or ("图片下载超时（8 秒）" if isinstance(exc, asyncio.TimeoutError) else "未提供异常详情")
+                logger.warning("火星检测跳过图片：message_id=%s part=%s %s: %s",
+                               msg_id, part, type(exc).__name__, reason)
         if hits:
             yield event.plain_result(hits[0])
 

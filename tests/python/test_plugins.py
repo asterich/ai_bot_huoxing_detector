@@ -26,7 +26,7 @@ def load(name, file):
     return value
 
 
-@pytest.mark.parametrize("mode", ["image", "xml-forward", "card", "lua-news", "lua-music"])
+@pytest.mark.parametrize("mode", ["image", "xml-forward", "card", "lua-news", "lua-music", "content-forward"])
 def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
     class Star:
         def __init__(self, context):
@@ -69,9 +69,17 @@ def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
             url = "https://y.music.163.com/m/song?id=123" if field == "music" else "https://mp.weixin.qq.com/s/example_article"
             raw = {"message": [{"type": "json", "data": {"data": json.dumps({
                 "app": app, "meta": {field: {"jumpUrl": url}}})}}]}
+        if mode == "content-forward":
+            raw = {"message": [{"type": "forward", "data": {"id": "first-resource"}}]}
+            async def call_action(action, **kwargs):
+                assert action == "get_forward_msg" and kwargs["id"] in ("first-resource", "changed-resource")
+                return {"messages": [{"sender": {"user_id": 123}, "message": [{"type": "text", "data": {"text": "whole pack"}}]}]}
+            event.bot = types.SimpleNamespace(call_action=call_action)
         if mode != "image":
             event.message_obj = types.SimpleNamespace(message_id="1", raw_message=raw)
         assert [item async for item in plugin.on_message(event)] == []
+        if mode == "content-forward":
+            raw = {"message": [{"type": "forward", "data": {"id": "changed-resource"}}]}
         event.message_obj = types.SimpleNamespace(message_id="2", raw_message=raw if mode != "image" else None)
         assert len([item async for item in plugin.on_message(event)]) == 1
         assert [item async for item in plugin.on_message(event)] == []

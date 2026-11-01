@@ -39,7 +39,7 @@ with open("meme.png", "rb") as f:
 print(result_dict(result))
 ```
 
-图片和整包转发也可使用统一的 `detector.detect(Message(...))`。`IDetector`、`Repository` 和 `RepositorySession` 定义接口；`Detector` 编排检测，`SqliteRepository` 实现存储。每条消息返回带依据的统一 SHA-256 指纹；整包转发只检查最顶层，不展开内部消息。见 [架构、统一哈希与调用示例](docs/ARCHITECTURE.md)。
+图片和整包转发也可使用统一的 `detector.detect(Message(...))`。`IDetector`、`Repository` 和 `RepositorySession` 定义接口；`Detector` 编排检测，`SqliteRepository` 实现存储。每条消息返回带依据的统一 SHA-256 指纹；原生层登记整包指纹；AstrBot 会有界读取转发元数据计算整包内容指纹，不下载媒体或逐条查重。见 [架构、统一哈希与调用示例](docs/ARCHITECTURE.md)。
 
 异步机器人应通过 `huoxing.worker.ImageWorker` 调用，避免阻塞事件循环。C++ binding 在复制输入后释放 GIL；Worker 只允许一个在途任务，忙时跳过，不建立无限队列。宿主取消等待后，已开始的后台任务仍可能登记图片，但不会因此启动更多后台任务。
 
@@ -101,7 +101,7 @@ pixi.toml / pixi.lock     环境声明与锁文件
 
 CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排序。项目源码通过 `import std;` 使用标准库；CMake 从工具链的 libstdc++ 标准模块源码生成 BMI。第三方 C 库、OpenCV、fmt 等头文件位于 global module fragment。Pixi 固定 CMake 4.4.4 及其标准模块实验开关，详细约定见 [STYLE.md](docs/STYLE.md)。更高编译器版本允许配置，但只有实际测试过的版本才计入验证结果。
 
-整包聊天记录顶层查重的状态和接入字段见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 是统一检测器的兼容入口，`huoxing.forward_database` 封装转发数据 SQL；均不获取或展开包内消息。
+整包聊天记录内容指纹及顶层回退的状态和接入字段见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 是统一检测器的兼容入口，`huoxing.forward_database` 封装转发数据 SQL；均不获取或展开包内消息。
 
 B 站、微信公众号、网易云音乐及其他分享卡片查重见 [CARDS.md](docs/CARDS.md)。
 

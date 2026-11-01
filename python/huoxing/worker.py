@@ -8,6 +8,10 @@ class ImageWorker:
         self.detector = detector
         self._task = None
 
+    @property
+    def busy(self):
+        return self._task is not None and not self._task.done()
+
     async def check(self, data, **metadata):
         return await self._run(partial(self.detector.ingest, data, **metadata))
 

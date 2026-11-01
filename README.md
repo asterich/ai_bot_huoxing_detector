@@ -104,3 +104,5 @@ CMake 用 `FILE_SET CXX_MODULES` 管理模块依赖，Ninja 按扫描结果排�
 整包聊天记录顶层查重的状态和接入字段见 [FORWARD.md](docs/FORWARD.md)。原生 `huoxing.forward` 是统一检测器的兼容入口，`huoxing.forward_database` 封装转发数据 SQL；均不获取或展开包内消息。
 
 B 站、微信公众号、网易云音乐及其他分享卡片查重见 [CARDS.md](docs/CARDS.md)。
+
+AstrBot 的提醒文案、个人火星触发限频、图片大小配置见 [CONFIGURATION.md](docs/CONFIGURATION.md)。

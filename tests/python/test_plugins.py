@@ -42,7 +42,7 @@ def test_astrbot_entrypoint(monkeypatch, tmp_path, mode):
         event_message_type=lambda *args: lambda function: function)
     logger = types.SimpleNamespace(warning=lambda *args: None)
     module(monkeypatch, "astrbot")
-    module(monkeypatch, "astrbot.api", logger=logger)
+    module(monkeypatch, "astrbot.api", AstrBotConfig=dict, logger=logger)
     module(monkeypatch, "astrbot.api.event", AstrMessageEvent=object, filter=filters)
     module(monkeypatch, "astrbot.api.message_components", Image=Image)
     module(monkeypatch, "astrbot.api.star", Star=Star, Context=object,

@@ -49,10 +49,20 @@ with tempfile.TemporaryDirectory(prefix="huoxing-wheel-") as temp:
     shutil.copytree(root / "plugins", isolated / "plugins", ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(root / "tools", isolated / "tools", ignore=shutil.ignore_patterns("__pycache__"))
     run(str(python), "-I", "-c", "import huoxing,pathlib,sys; assert pathlib.Path(huoxing.__file__).resolve().is_relative_to(pathlib.Path(sys.prefix)); import pytest; raise SystemExit(pytest.main(['tests/python','-q']))")
-    # Upgrade once more, then restore the previous real wheel and plugin snapshot.
+    # Reproduce the server's existing editable install, on this CI runner only.
+    editable_env = dict(env, CC=str(prefix / "bin/x86_64-conda-linux-gnu-cc"),
+                        CXX=str(prefix / "bin/x86_64-conda-linux-gnu-c++"),
+                        CONDA_PREFIX=str(prefix), CMAKE_PREFIX_PATH=str(prefix),
+                        CMAKE_BUILD_PARALLEL_LEVEL="2")
+    editable_env.pop("CMAKE_COMMAND", None)
+    editable_env["PATH"] = str(prefix / "bin") + ":" + env["PATH"]
+    subprocess.run([str(python), "-m", "pip", "install", "--no-deps", "--no-build-isolation", "-e", str(root)],
+                   check=True, cwd=isolated, env=editable_env)
+    # The actual deployment remains compiler-disabled and must remove editable metadata.
     run(*deploy, "install", *options)
     current = json.loads((state / "current.json").read_text())
     run(*deploy, "rollback", "--backup", current["backup"], *options)
-    run(str(python), "-I", "-c", "import huoxing; from huoxing import _native; print('Rollback import:',huoxing.__file__)")
+    run(str(python), "-I", "-c", "import huoxing,pathlib; from huoxing import _native; assert pathlib.Path(huoxing.__file__).resolve() == pathlib.Path(" + repr(str(root / "python/huoxing/__init__.py")) + "); print('Editable rollback import:',huoxing.__file__)")
     assert (data / "keep-marker").read_text() == "database untouched"
     print("Verified installed wheel, relocated runtime, installer and rollback", flush=True)
+

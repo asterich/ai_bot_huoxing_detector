@@ -1,5 +1,7 @@
 # 火星梗图检测器
 
+已有服务器更新请使用 [CI 二进制发布包与回退](docs/BINARY_DEPLOY.md)，避免在运行机器上编译或跑回归测试。
+
 QQ群梗图改图查重。核心使用 **C++26 named modules / import std**，支持 **GCC ≥16.1 / Clang ≥21**，通过 **pybind11** 提供 Python binding；**Pixi** 管理工具链、fmt、原生库和 Python 环境。锁定环境以 GCC 16.1 和 Clang 21 为验证基线。支持裁剪、边框、局部水印、缩放与 JPEG 重压缩的视觉重复检测，不需要模型 API 或 GPU。
 
 目标平台是 Linux x86_64；Windows 使用 WSL2。原生 Windows/MSVC 不在当前构建目标内。

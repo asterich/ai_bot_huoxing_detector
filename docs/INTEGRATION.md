@@ -24,6 +24,16 @@ SnowLuma 当前采用源码可见的非商业许可，明确不属于 OSI 开源
 
 示例使用宿主 `Image.convert_to_file_path()` 获取媒体，框架负责下载；应在宿主/网关限制媒体下载大小。项目读取和解码最多 8 MiB。只监听群消息，忽略自身消息；同一消息重推通过 `replayed` 抑制重复提醒。每条消息最多一条提醒，处理器忙时跳过本次图片，不保证处理每张图。
 
+图片分类在下载之前进行：忽略 `face`、`mface`、`emoji`，以及 `file=marketface` 或 `sub_type` / `subType` 非零的 `image`。普通图片的子类型可以缺省或为 `0`。AstrBot 的 OneBot 入口使用原始外层消息段分类，再构造 Image，避免宿主转换丢失表情子类型；保留原始分段序号，跳过表情后仍可处理同消息中的普通图片。其他适配器使用其 Image 组件保留的子类型字段。按平台消息类型区分，不根据图片内容猜测是否为表情包。
+
+跳过日志包含 `message_id`、`part`、异常类型和具体原因：文件字节数与 8 MiB 上限、实际宽高与 1600 万像素上限、尺寸过小、格式与帧数、下载超时等。MPO/JPEG 多图像文件中有 Apple/Adobe HDR 增益图 XMP 标记时明确输出“带 HDR 增益图的照片”，不按动图描述；未识别的多图像文件单独说明。若同时像素超限并包含 HDR 辅助图，两项原因都会输出，例如：
+
+```text
+火星检测跳过图片：message_id=... part=0 ValueError: 图片像素过多：5712x4284=24470208 pixels，上限 16000000 pixels；暂不支持带 HDR 增益图的照片：format=MPO, frames=2，包含辅助图像
+```
+
+本次只改进拒绝策略和诊断信息，不自动缩放大图或选取 HDR 主图；原有大小和多图像限制继续生效。
+
 参考：[插件开发指南](https://docs.astrbot.app/dev/star/plugin-new.html)、[消息事件](https://docs.astrbot.app/dev/star/guides/listen-message-event.html)、[Image 组件源码](https://github.com/AstrBotDevs/AstrBot/blob/master/astrbot/core/message/components.py)。
 
 ### MaiBot

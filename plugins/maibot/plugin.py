@@ -1,4 +1,4 @@
-"""MaiBot SDK 2.x 示例；只处理 raw_message 最顶层图片/表情。"""
+"""MaiBot SDK 2.x 示例；只处理 raw_message 最顶层普通图片。"""
 import base64
 from pathlib import Path
 
@@ -8,6 +8,7 @@ from maibot_sdk.types import HookMode
 from huoxing import Detector, MAX_BYTES
 from huoxing.worker import ImageWorker, format_hit
 from huoxing.forward import format_forward_hit
+from huoxing.classification import is_regular_image
 
 
 class HuoxingPlugin(MaiBotPlugin):
@@ -51,12 +52,16 @@ class HuoxingPlugin(MaiBotPlugin):
         except (ValueError, OSError, RuntimeError) as exc:
             self.ctx.logger.warning("整包顶层查重跳过：%s", type(exc).__name__)
         for part, segment in enumerate(raw[:32]):
-            if not isinstance(segment, dict) or segment.get("type") not in ("image", "emoji"):
+            if not is_regular_image(segment):
                 continue
             data = segment.get("data")
             media = data if isinstance(data, dict) else segment
             encoded = media.get("binary_data_base64")
-            if not isinstance(encoded, str) or len(encoded) > 4 * ((MAX_BYTES+2)//3):
+            if not isinstance(encoded, str):
+                continue
+            if len(encoded) > 4 * ((MAX_BYTES+2)//3):
+                self.ctx.logger.warning("火星检测跳过图片：message_id=%s part=%s 图片文件过大：base64 长度 %s，上限 %s bytes (8 MiB)",
+                                        str(msg_id), part, len(encoded), MAX_BYTES)
                 continue
             try:
                 binary = base64.b64decode(encoded, validate=True)
@@ -70,7 +75,8 @@ class HuoxingPlugin(MaiBotPlugin):
                         self.ctx.logger.info("查重命中，宿主未提供 stream_id：%s", result.first_message_id)
                     break
             except (ValueError, OSError, RuntimeError) as exc:
-                self.ctx.logger.warning("火星检测跳过图片：%s", type(exc).__name__)
+                self.ctx.logger.warning("火星检测跳过图片：message_id=%s part=%s %s: %s",
+                                        str(msg_id), part, type(exc).__name__, str(exc))
 
 
 def create_plugin():

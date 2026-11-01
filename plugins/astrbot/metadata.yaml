@@ -1,0 +1,9 @@
+name: astrbot_plugin_huoxing
+display_name: 火星梗图检测
+desc: C++26 图片改图查重
+version: v0.2.0
+author: asterich
+repo: https://github.com/asterich/ai_bot_huoxing_detector
+support_platforms:
+  - aiocqhttp
+astrbot_version: ">=4.16,<5"

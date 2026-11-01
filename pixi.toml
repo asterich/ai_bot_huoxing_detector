@@ -1,0 +1,37 @@
+[workspace]
+name = "huoxing-detector"
+version = "0.2.0"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+gxx_linux-64 = "16.1.*"
+gcc_linux-64 = "16.1.*"
+cmake = "4.4.4.*"
+ninja = ">=1.12,<2"
+libopencv = ">=4.10,<5"
+sqlite = ">=3.45,<4"
+openssl = ">=3,<4"
+fmt = ">=11,<13"
+python = "3.12.*"
+numpy = ">=1.26,<3"
+pillow = ">=10,<14"
+pybind11 = ">=2.13,<4"
+scikit-build-core = ">=0.10,<1"
+pip = ">=24"
+pytest = ">=8,<10"
+clang-format = ">=20,<23"
+clangxx_linux-64 = "21.1.*"
+clang-tools = "21.1.*"
+
+[tasks]
+configure-gcc = "cmake -S . -B build/gcc -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-c++ -Dpybind11_DIR=$CONDA_PREFIX/share/cmake/pybind11"
+configure-clang = "cmake -S . -B build/clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=$CONDA_PREFIX/bin/clang++-21 -Dpybind11_DIR=$CONDA_PREFIX/share/cmake/pybind11"
+build-gcc = { cmd = "cmake --build build/gcc -j 2", depends-on = ["configure-gcc"] }
+build-clang = { cmd = "cmake --build build/clang -j 2", depends-on = ["configure-clang"] }
+test-gcc = { cmd = "python tools/test_build.py gcc", depends-on = ["build-gcc"] }
+test-clang = { cmd = "python tools/test_build.py clang", depends-on = ["build-clang"] }
+install = "CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-c++ python -m pip install --no-deps --no-build-isolation -e ."
+test = { depends-on = ["format-check", "test-gcc", "test-clang"] }
+format = "python tools/format_cpp.py"
+format-check = "python tools/format_cpp.py --check"

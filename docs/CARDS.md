@@ -1,6 +1,6 @@
 # 消息分享卡片查重
 
-AstrBot 与 MaiBot 在群内识别最外层 QQ `com.tencent.structmsg` 的 `meta.news.jumpUrl`、`com.tencent.miniapp_01` 的 `meta.detail_1.qqdocurl`，以及 `serviceID="1"` XML 卡片的根 `url` 属性。不会扫描标题、预览图、来源链接、普通文本、引用消息或合并转发内部节点。
+AstrBot 与 MaiBot 在群内识别最外层 QQ `com.tencent.structmsg` / `com.tencent.tuwen.lua` / `com.tencent.music.lua` 的 `meta.news.jumpUrl`、`com.tencent.miniapp_01` 的 `meta.detail_1.qqdocurl`，以及 `serviceID="1"` XML 卡片的根 `url` 属性。不会扫描标题、预览图、来源链接、普通文本、引用消息或合并转发内部节点。
 
 匹配规则：
 
@@ -17,3 +17,5 @@ XML 最多 64 KiB，禁止 DTD/实体声明；URL 最多 4096 字符，拒绝非
 验证使用生成的卡片样例、真实 SQLite/原生扩展和宿主事件替身；未在真实 QQ 群发送卡片进行端到端验证。
 
 网易云音乐支持 music.163.com / m.music.163.com / y.music.163.com 的 song、album、playlist ID，包含桌面 #/song?id= 和移动 /m/song?id= 路径。忽略分享跟踪参数，歌曲、专辑和歌单各用独立命名空间。QQ 音乐 JSON 卡片读取 meta.music.jumpUrl；音乐 XML 卡片读取 serviceID=2 根 URL。无明确目标 ID 的网易云地址不匹配，短链不联网展开。
+
+真实 QQ 分享使用 tuwen.lua 的 news.jumpUrl、music.lua 的 music.jumpUrl，与旧 structmsg 共同支持；不按卡片标题猜测链接。纯文本链接不属于消息卡片，不进入该检测入口。

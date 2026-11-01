@@ -77,14 +77,14 @@ def astr_plugin(monkeypatch, tmp_path, image_class, warnings):
     filters = types.SimpleNamespace(EventMessageType=types.SimpleNamespace(GROUP_MESSAGE=1),
         event_message_type=lambda *args: lambda function: function)
     module(monkeypatch, "astrbot")
-    module(monkeypatch, "astrbot.api", logger=types.SimpleNamespace(warning=lambda *args: warnings.append(args)))
+    module(monkeypatch, "astrbot.api", AstrBotConfig=dict, logger=types.SimpleNamespace(warning=lambda *args: warnings.append(args)))
     module(monkeypatch, "astrbot.api.event", AstrMessageEvent=object, filter=filters)
     module(monkeypatch, "astrbot.api.message_components", Image=image_class)
     module(monkeypatch, "astrbot.api.star", Star=Star, Context=object,
         StarTools=types.SimpleNamespace(get_data_dir=lambda: tmp_path))
     value = load("policy_astr_plugin", Path(__file__).parents[2] / "plugins/astrbot/main.py")
     class RecordingDetector:
-        def __init__(self, path):
+        def __init__(self, path, **limits):
             self.calls = []
         def ingest(self, data, **metadata):
             self.calls.append(metadata)

@@ -1,0 +1,60 @@
+{
+  "image_reply_template": {
+    "type": "string",
+    "description": "图片火星提醒文案",
+    "default": "这张图之前出现过：消息 {first_message_id}，首次记录 {first_seen}。依据：{method}。",
+    "hint": "支持 {first_message_id}、{first_seen}、{method}；用 {{ 和 }} 输出大括号。"
+  },
+  "forward_reply_template": {
+    "type": "string",
+    "description": "合并转发火星提醒文案",
+    "default": "这个聊天记录包的顶层资源 ID 之前出现过，首次消息：{first_message_id}。"
+  },
+  "card_reply_template": {
+    "type": "string",
+    "description": "分享卡片火星提醒文案",
+    "default": "这张分享卡片的目标链接之前出现过，首次消息：{first_message_id}。"
+  },
+  "trigger_window_seconds": {
+    "type": "int",
+    "description": "火星触发统计窗口（秒）",
+    "default": 180,
+    "hint": "0 禁用暂停规则；范围 0–86400。按同一机器人、群、发送者分别统计。"
+  },
+  "trigger_image_count": {
+    "type": "int",
+    "description": "窗口内触发几张火星图片后暂停此人",
+    "default": 3,
+    "hint": "范围 1–1000。同一消息中的多张火星图分别计数；命中缓存也计数。"
+  },
+  "sender_pause_seconds": {
+    "type": "int",
+    "description": "暂停此人火星检查的时长（秒）",
+    "default": 600,
+    "hint": "0 禁用暂停规则；范围 0–86400。暂停时不下载图片，也不检查此人的卡片和合并转发。"
+  },
+  "same_image_cooldown_seconds": {
+    "type": "int",
+    "description": "相同图片结果缓存时间（秒）",
+    "default": 60,
+    "hint": "范围 0–86400，0 禁用缓存。首次火星正常检测，此后复用证据并继续累计次数。相同源可免下载，源改变时按文件摘要免解码。"
+  },
+  "reply_cooldown_seconds": {
+    "type": "int",
+    "description": "群内提醒最短间隔（秒）",
+    "default": 30,
+    "hint": "范围 0–86400，0 不限。仅抑制提醒，仍累计火星次数。"
+  },
+  "max_image_mib": {
+    "type": "float",
+    "description": "图片文件大小上限（MiB）",
+    "default": 8,
+    "hint": "范围 0.1–32。文件读取及解码共同执行；不自动压缩。"
+  },
+  "max_image_megapixels": {
+    "type": "float",
+    "description": "图片像素上限（百万像素）",
+    "default": 16,
+    "hint": "范围 0.1–32。例如 16 表示 1600 万像素。不改变表情包、HDR、动图强制跳过规则。"
+  }
+}
